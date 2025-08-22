@@ -6,7 +6,15 @@
 
 NL2SQL is a comprehensive data synchronization and AI-powered SQL generation platform that enables users to interact with databases using natural language queries. The system consists of three main components: a modern React frontend, a robust .NET Core backend, and an intelligent Vanna AI Python server.
 
-![Work image 1](./NL2SQL.WebApp/wwwroot/assets/images/main_logo.png)
+![Work image 1](./NL2SQL.WebApp/wwwroot/assets/images/var_1.png)
+
+![Work image 2](./NL2SQL.WebApp/wwwroot/assets/images/var_2.png)
+
+![Work image 3](./NL2SQL.WebApp/wwwroot/assets/images/var_3.png)
+
+![Work image 4](./NL2SQL.WebApp/wwwroot/assets/images/var_4.png)
+
+![Work image 5](./NL2SQL.WebApp/wwwroot/assets/images/var_5.png)
 
 ### Technologies used
 
