@@ -1,0 +1,110 @@
+# .NET build artifacts
+[Bb]in/
+[Oo]bj/
+[Tt]est[Rr]esults/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+[Bb]uildArtifacts/
+*.nupkg
+[Nn]uget/
+*.snupkg
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+*.sln.iml
+coverage*.xml
+*.coverage
+*.lcov
+TestResult.xml
+*.trx
+.vs/
+*.binlog
+.history/
+.vsconfig
+appsettings.json
+appsettings.Development.json
+wwwroot/build/
+*.csproj.user
+Visual Studio 2022/
+
+# Publish and deploy settings
+Properties/PublishProfiles/
+Properties/ServiceDependencies/
+*.pubxml
+*.pubxml.user
+profile.arm.json
+
+# Node artifact files
+node_modules/
+dist/
+build/
+.cache/
+*.tsbuildinfo
+coverage/
+
+# Python files
+*.py[cod]
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+!.env.example
+!.env.template
+instance/
+*.sqlite
+*.db
+/NL2SQL.WebApp/VannaPython/venv
+/NL2SQL.WebApp/VannaPython/shared_chroma_db
+/logs
+
+# Log files
+*.log
+
+# General
+.DS_Store
+Thumbs.db
+*.class
+*.jar
+*.app
+*.exe
+*.war
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv
+TEST*.xml
+
+# Yarn/pnpm
+.yarn/
+.yarnrc
+yarn.lock
+.pnp.*
+pnpm-lock.yaml
+
+# Docker
+docker-compose.override.yml
+*.dockerignore
+
+# Machine Learning or temporary data
+*.h5
+*.model
+data/
+
+# Azure Functions
+func/
+
+# Publish output
+publish/

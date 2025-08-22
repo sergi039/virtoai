@@ -1,0 +1,1 @@
+export { FreshdeskConfig } from './FreshdeskConfig';

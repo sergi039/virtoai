@@ -1,0 +1,1 @@
+export type ISupportedServiceData = 'apollo' | 'ortto' | 'freshdesk' | 'pipedrive';

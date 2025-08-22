@@ -1,0 +1,15 @@
+﻿using NL2SQL.WebApp.Models.Ortto.Response;
+
+namespace NL2SQL.WebApp.Repositories.Interfaces
+{
+    public interface IOrttoRepository
+    {
+        Task SetupDatabaseAsync();
+        Task StorePersonsAsync(List<OrttoPersonModel> persons);
+        Task StoreOrganizationsAsync(List<OrttoOrganizationModel> organizations);
+        Task StoreActivitiesAsync(List<OrttoActivityModel> activities, string orttoPersonId);
+        Task<int> MatchWithFreshdeskContactsAsync();
+        Task<int> MatchWithPipedriveDataAsync();
+        Task<List<string>> GetOrttoPersonIdsAsync();
+    }
+}

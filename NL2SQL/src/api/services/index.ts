@@ -1,0 +1,20 @@
+import { ChatServiceImplementation } from "./chatService";
+import { DatabaseInfoImplementation } from "./databaseInfoService";
+import { AzureGraphServiceImplementation } from "./azureGraphService";
+import { IChatService, IDatabaseInfoService, IMessageService, ISettingDataService, ISpeechService, ITrainingAiService, IAzureGraphService, IConstructorService, IAiGenerateService } from "./interfaces";
+import { MessageServiceImplementation } from "./messageService";
+import { SettingDataImplementation } from "./settingDataService";
+import { SpeechServiceImplementation } from "./speechService";
+import { TrainingAiServiceImplementation } from "./trainingAiService";
+import { ConstructorServiceImplementation } from "./constructorService";
+import { AiGenerateServiceImplementation } from "./aiGenerateService";
+
+export const chatService: IChatService = new ChatServiceImplementation();
+export const messageService: IMessageService = new MessageServiceImplementation();
+export const databaseInfoService: IDatabaseInfoService = new DatabaseInfoImplementation();
+export const settingDataService: ISettingDataService = new SettingDataImplementation();
+export const trainingAiService: ITrainingAiService = new TrainingAiServiceImplementation();
+export const speechService: ISpeechService = new SpeechServiceImplementation();
+export const azureGraphService: IAzureGraphService = new AzureGraphServiceImplementation();
+export const constructorService: IConstructorService = new ConstructorServiceImplementation();
+export const aiGenerateService: IAiGenerateService = new AiGenerateServiceImplementation();

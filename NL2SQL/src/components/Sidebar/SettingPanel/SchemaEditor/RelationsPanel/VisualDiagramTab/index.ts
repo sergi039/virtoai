@@ -1,0 +1,1 @@
+export { VisualDiagramTab } from './VisualDiagramTab';

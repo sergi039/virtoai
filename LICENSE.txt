@@ -1,0 +1,40 @@
+VirtoSoftware Community License (VCL) v1.0
+
+Copyright (c) 2025 VirtoSoftware
+
+1. Grant of Rights
+Subject to the terms of this License, you are free to:
+- Use the Software for personal projects and internal use within your organization.
+- Modify, fork, and contribute to the Software.
+- Share modified versions, provided this License and Attribution Notice remain intact.
+
+2. Attribution
+All copies, modifications, and derivative works must:
+- Retain this License text and copyright notice.
+- Clearly indicate any changes made.
+- Provide attribution to VirtoSoftware as the original creator.
+
+3. Restrictions
+You may NOT, without a separate commercial agreement with VirtoSoftware:
+- Use the Software to provide commercial services, SaaS offerings, or integrate it into enterprise products.
+- Redistribute the Software or derivatives for a fee, subscription, or as part of a commercial package.
+- Remove or alter any notices, trademarks, or branding associated with VirtoSoftware.
+
+4. Contributions
+By submitting contributions (code, documentation, or otherwise), you agree:
+- Your contributions are licensed under the same terms as this License.
+- VirtoSoftware may use, modify, and redistribute your contributions under this License and its commercial licenses.
+
+5. Warranty Disclaimer
+The Software is provided “AS IS”, without warranty of any kind.
+
+6. Termination
+This License terminates automatically if you breach its terms. Upon termination, you must immediately stop using the Software.
+
+7. Commercial Licensing
+If you wish to use the Software for commercial, enterprise, or SaaS purposes, please contact:
+legal@virtosoftware.com
+
+8. Change of License
+On January 1, 2029, this Software will automatically be re-licensed under the Apache License, Version 2.0.
+Until that date, this Community License governs all use of the Software.
