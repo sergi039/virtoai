@@ -61,8 +61,10 @@ const strings: IVirtoStrings = {
         syntaxError: 'There was an issue with the SQL syntax generated for your query. Please try rephrasing your request.',
         generationError: 'We encountered an error while processing your request. Please try again or rephrase your query.',
         unclearRequest: 'Your query is unclear or no matching data was found. Could you please clarify your request?',
-        clarificationQuestions: 'Question',
+        clarificationQuestionTitle: 'AI answer',
         suggestedOptions: 'Suggested options',
+        aiSystemResponse: 'Here is the answer to request:',
+        improveAnswerQuestion: 'To improve the answer, you can provide a response to these question.',
         
         dateCategories: {
             today: "Today",
@@ -256,6 +258,9 @@ const strings: IVirtoStrings = {
             relationTypeToggle: 'Relation Type',
             implicitRelation: 'Implicit Relation',
             explicitRelation: 'Explicit Relation',
+            requiredJoinToggle: 'Required Join',
+            requiredJoin: 'Required Join',
+            optionalJoin: 'Optional Join',
             ruleCreationError: 'An error occurred while creating the rule.',
             relationNotFound: 'The specified relation was not found.',
             implicitRelationDeletedSuccess: 'Implicit relation between "{0}" and "{1}" deleted successfully.',

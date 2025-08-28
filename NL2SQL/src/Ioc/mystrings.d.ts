@@ -61,8 +61,10 @@ interface IVirtoStrings {
         syntaxError: string;
         generationError: string;
         unclearRequest: string;
-        clarificationQuestions: string;
+        clarificationQuestionTitle: string;
         suggestedOptions: string;
+        aiSystemResponse: string;
+        improveAnswerQuestion: string;
         
         dateCategories: {
             today: string;
@@ -253,6 +255,9 @@ interface IVirtoStrings {
             relationTypeToggle: string;
             implicitRelation: string;
             explicitRelation: string;
+            requiredJoinToggle: string;
+            requiredJoin: string;
+            optionalJoin: string;
             implicitRelationCreatedSuccess: string;
             implicitRelationCreationError: string;
             ruleCreationError: string;
