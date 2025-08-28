@@ -14,9 +14,6 @@ namespace NL2SQL.WebApp.Entities
         [Column("person_id")]
         public string? PersonId { get; set; }
 
-        [Column("organization_id")]
-        public string? OrganizationId { get; set; }
-
         [Column("activity_type")]
         public string? ActivityType { get; set; }
 

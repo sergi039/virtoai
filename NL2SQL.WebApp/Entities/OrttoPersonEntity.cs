@@ -20,15 +20,6 @@ namespace NL2SQL.WebApp.Entities
         [Column("last_name")]
         public string? LastName { get; set; }
 
-        [Column("date_created")]
-        public DateTime? DateCreated { get; set; }
-
-        [Column("date_updated")]
-        public DateTime? DateUpdated { get; set; }
-
-        [Column("subscription_status")]
-        public string? SubscriptionStatus { get; set; }
-
         [Column("data")]
         public string Data { get; set; }
 
