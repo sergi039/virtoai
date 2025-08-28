@@ -211,13 +211,13 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
       setEditedSqlQuery(currentSqlMessage.sql || '');
     }
     setShowSqlEditor(!showSqlEditor);
-    setShowCombinedQuery(false); 
+    setShowCombinedQuery(false);
     setIsEditingSql(false);
   };
 
   const handleShowCombinedQuery = () => {
     setShowCombinedQuery(!showCombinedQuery);
-    setShowSqlEditor(false); 
+    setShowSqlEditor(false);
     setIsEditingSql(false);
   };
 
@@ -256,6 +256,28 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
     } catch (error) {
       toast.error(strings.Chat.sqlSavedFailed);
     }
+  };
+
+  const handleOutputAiAnswer = (questions: string[]) => {
+    const aiResponse = (
+      <div key="ai-system-response" className={classNames.aiSystemResponse}>
+        {strings.Chat.aiSystemResponse} {message.combinedQuery}.
+      </div>
+    );
+
+    if (questions.length > 0) {
+      const questionsSection = (
+        <div key="clarification-section">
+          <div className={classNames.aiImproveSection}>
+            {strings.Chat.improveAnswerQuestion} {questions[0]}
+          </div>
+        </div>
+      );
+
+      return [aiResponse, questionsSection];
+    }
+
+    return aiResponse;
   };
 
   const handleLike = async () => {
@@ -370,18 +392,16 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
       if (clarificationData) {
         return (
           <div className={classNames.contentAI}>
-            {clarificationData.questions.length > 0 && (
-              <div className={classNames.questionsContainer}>
-                <Text className={classNames.questionsTitle}>
-                  {strings.Chat.clarificationQuestions}
+            <div className={classNames.questionsContainer}>
+              <Text className={classNames.questionsTitle}>
+                {strings.Chat.clarificationQuestionTitle}
+              </Text>
+              <div className={classNames.aiQuestionContent}>
+                <Text className={classNames.aiQuestionText}>
+                  {handleOutputAiAnswer(clarificationData.questions)}
                 </Text>
-                <div className={classNames.aiQuestionContent}>
-                  <Text className={classNames.aiQuestionText}>
-                    {clarificationData.questions.join('\n')}
-                  </Text>
-                </div>
               </div>
-            )}
+            </div>
 
             {!clarificationData.isUnclearRequest && message.sqlMessages && message.sqlMessages.length > 0 && (
               <div>
@@ -456,13 +476,13 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
 
 
     if (!message.sqlMessages || message.sqlMessages.length === 0) {
-      if (message.text === strings.Chat.unclearRequest || 
-          (message.followUpQuestions && message.followUpQuestions.includes(strings.Chat.unclearRequest))) {
+      if (message.text === strings.Chat.unclearRequest ||
+        (message.followUpQuestions && message.followUpQuestions.includes(strings.Chat.unclearRequest))) {
         return (
           <div className={classNames.contentAI}>
             <div className={classNames.questionsContainer}>
               <Text className={classNames.questionsTitle}>
-                {strings.Chat.clarificationQuestions}
+                {strings.Chat.clarificationQuestionTitle}
               </Text>
               <div className={classNames.aiQuestionContent}>
                 <Text className={classNames.aiQuestionText}>
@@ -473,7 +493,7 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
           </div>
         );
       }
-      
+
       return (
         <div className={classNames.contentAI}>
           <MessageBar
@@ -532,13 +552,17 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
 
     if (sqlMessage.isSyntaxError) {
       return (
-        <MessageBar
-          messageBarType={MessageBarType.error}
-          isMultiline={false}
-          styles={styleNames.messageEmptyData}
-        >
-          {strings.Chat.syntaxError}
-        </MessageBar>
+        <>
+          <MessageBar
+            messageBarType={MessageBarType.error}
+            isMultiline={false}
+            styles={styleNames.messageEmptyData}
+          >
+            {strings.Chat.syntaxError}
+          </MessageBar>
+
+          {renderTableActionButtons()}
+        </>
       );
     }
 
@@ -556,13 +580,17 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
 
     if (!sqlMessage.text || sqlMessage.text.trim() === '') {
       return (
-        <MessageBar
-          messageBarType={MessageBarType.info}
-          isMultiline={false}
-          styles={styleNames.messageEmptyData}
-        >
-          {strings.Chat.noResultsFound}
-        </MessageBar>
+        <>
+          <MessageBar
+            messageBarType={MessageBarType.info}
+            isMultiline={false}
+            styles={styleNames.messageEmptyData}
+          >
+            {strings.Chat.noResultsFound}
+          </MessageBar>
+
+          {renderTableActionButtons()}
+        </>
       );
     }
 
@@ -571,13 +599,17 @@ const MessageBase: React.FunctionComponent<IMessageProps> = ({ message, theme: c
 
       if (results.length === 0) {
         return (
-          <MessageBar
-            messageBarType={MessageBarType.info}
-            isMultiline={false}
-            styles={styleNames.messageEmptyData}
-          >
-            {strings.Chat.noResultsFound}
-          </MessageBar>
+          <>
+            <MessageBar
+              messageBarType={MessageBarType.info}
+              isMultiline={false}
+              styles={styleNames.messageEmptyData}
+            >
+              {strings.Chat.noResultsFound}
+            </MessageBar>
+
+            {renderTableActionButtons()}
+          </>
         );
       }
 
