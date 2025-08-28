@@ -1,5 +1,4 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using NL2SQL.WebApp.Models.Ortto.Request;
+﻿using NL2SQL.WebApp.Models.Ortto.Request;
 using NL2SQL.WebApp.Repositories.Interfaces;
 using NL2SQL.WebApp.Services.Import.Interfaces;
 using NL2SQL.WebApp.Services.Interfaces;
@@ -89,18 +88,17 @@ namespace NL2SQL.WebApp.Services.Import
 
         private async Task<int> ImportActivitiesAsync(List<string> personIds)
         {
-            var totalActivities = 0;
-
             if (personIds.IsNullOrEmpty())
-                return totalActivities;
+                return 0;
+
+            var totalActivities = 0;
 
             foreach (var personId in personIds)
             {
                 var activities = await _orttoApiService.FetchOrttoActivitiesAsync(personId);
                 if (!activities.IsNullOrEmpty() && activities.Any())
                 {
-                    await _unitOfWork.Ortto.StoreActivitiesAsync(activities, personId);
-                    totalActivities += activities.Count;
+                    totalActivities += await _unitOfWork.Ortto.StoreActivitiesAsync(activities, personId);
                 }
 
                 await Task.Delay(ActivityDelayMilliseconds);
@@ -111,7 +109,7 @@ namespace NL2SQL.WebApp.Services.Import
 
         private async Task<(int TotalImported, string? NextCursor)> ImportBatchAsync<T>(
             Func<int, string?, Task<(List<T> Items, string? Cursor)>> fetchFunc,
-            Func<List<T>, Task> storeFunc,
+            Func<List<T>, Task<int>> storeFunc,
             int? limit,
             string? initialCursor = null)
         {
@@ -124,8 +122,7 @@ namespace NL2SQL.WebApp.Services.Import
                 if (!items.Any())
                     break;
 
-                await storeFunc(items);
-                totalImported += items.Count;
+                totalImported += await storeFunc(items);
                 nextCursor = cursor;
 
                 if (limit.HasValue && totalImported >= limit.Value)

@@ -4,8 +4,8 @@ namespace NL2SQL.WebApp.Services.Interfaces
 {
     public interface IApolloApiService
     {
-        Task<List<ApolloContactModel>> SearchContactsAsync(Dictionary<string, object> parameters);
-        Task<ApolloContactModel> GetContactAsync(string contactId);
-        Task<ApolloOrganizationModel> GetOrganizationAsync(string organizationId);
+        Task<List<ApolloContactModel>> SearchContactsAsync(Dictionary<string, object> parameters, int limit);
+        Task<ApolloContactModel?> GetContactAsync(string contactId);
+        Task<ApolloOrganizationModel?> GetOrganizationAsync(string organizationId);
     }
 }
