@@ -36,7 +36,7 @@ namespace NL2SQL.WebApp.Services
                                 ?? throw new ArgumentNullException(nameof(_chatService), "Chat service cannot be null.");
 
             var openAiClient = new OpenAIClient(apiKey);
-            _chatClient = openAiClient.GetChatClient("gpt-5");
+            _chatClient = openAiClient.GetChatClient("gpt-4o");
         }
 
         public async Task<IList<string>> GenerateFieldContextAsync(RequestGenerateFieldContextModel model)
@@ -311,7 +311,6 @@ namespace NL2SQL.WebApp.Services
         public async Task<GenerateClarifyingModel> GenerateClarifyingAsync(string userQuery, int chatId)
         {
             var informationForQuery = await _vannaService.ExtractKnowledgeAsync(userQuery);
-            var chatHistory = await _chatService.GetChatWithAllIncludeByIdAsync(chatId);
 
             if (!string.IsNullOrEmpty(informationForQuery.Error) || !informationForQuery.Ddl.Any())
             {
@@ -325,23 +324,11 @@ namespace NL2SQL.WebApp.Services
 
             var ddlInfo = string.Join("\n\n", informationForQuery.Ddl);
 
-            var recentUserHistory = chatHistory.Messages
-                .Where(m => m.IsUser)
-                .OrderByDescending(m => m.CreatedAt)
-                .Take(30)
-                .Select(m => $"User: {m.Text}")
-                .Reverse()
-                .ToList();
-
-            var historyString = string.Join("\n", recentUserHistory);
-
             var prompt = $@"
                 You are an AI assistant that generates exactly one clarifying question, one main suggested refinement (the most suitable based on the query, DDL, and history), and two diverse additional suggested refinements to resolve ambiguities in a user's natural language query. Use the database schema (DDL) for tables, fields, and services (from table prefixes like 'apollo' for Apollo or 'freshdesk' for Freshdesk), and incorporate the recent chat history to build on previous clarifications, ensure continuity in the conversation chain, and avoid repetition.
                 User query: '{userQuery}'
                 Database schema (DDL):
                 {ddlInfo}
-                Recent user message history (oldest to newest, use to build upon prior ambiguities resolved, like if service was clarified before, now focus on sorting, fields, filtering, or services):
-                {historyString}
                 Task:
 
                 First, evaluate the clarity of the user query using a capping system:
@@ -366,22 +353,22 @@ namespace NL2SQL.WebApp.Services
                 If total score < 136 (ambiguities exist):
 
                 Generate exactly one clarifying question that asks for details on sorting, fields, filtering, or services, referencing specific DDL elements (e.g., 'How would you like to sort the contacts from apollo_contacts?', 'Which fields from freshdesk_tickets would you like to include, such as priority or status?', 'What filtering conditions would you like to apply, such as where status is open?').
-                Generate exactly one main suggested refinement and two diverse additional suggested refinements. Each must be a full, complete query phrase that always incorporates the original user query verbatim as its base, adding refinements in a natural way to resolve ambiguities (e.g., if user query is 'give me 6 tickets', main: 'give me 6 tickets from Freshdesk', suggestions: ['give me 6 tickets sorted by creation date', 'give me 6 tickets with basic fields and detailed request info', 'give me 6 tickets where status is open']). Base them on DDL tables/fields/services, make them varied (e.g., different sorting fields or directions, different fields, different filtering conditions like 'where' clauses, different services), ensure they fit seamlessly into the conversation chain without repeating history.
-                The main suggestion must always start with the exact user query and append the most fitting refinement based on common patterns, history, and DDL to resolve the main ambiguity.
+                Generate exactly one main suggested refinement and two diverse additional suggested refinements. Each must be a full, complete query phrase that always incorporates the original user query verbatim as its base, always appending additional words in a natural way to resolve ambiguities (e.g., if user query is 'give me 6 tickets', main: 'give me 6 tickets from Freshdesk'). Base them on DDL tables/fields/services, make them varied (e.g., different sorting fields or directions, different fields, different filtering conditions like 'where' clauses, different services), ensure they fit seamlessly into the conversation chain without repeating history.
+                The main suggestion must always start with the exact user query and append additional words for the most fitting minimal refinement based on common patterns, history, and DDL to resolve the main ambiguity (e.g., prioritize adding just the service if unspecified, without over-adding extras like sort or filter unless that's the primary missing element; do not add multiple refinements unless necessary).
 
                 If the query is nonsensical/invalid (e.g., 'dfgjdfgklfd', score=0): generate one question to clarify, an empty main suggestion, and no additional suggestions.
                 Examples:
 
-                For query 'Give me 5 contacts', history: '': Score <126 (e.g., understandable +30, multiple tables +10, no service/sort/fields/filter), Question: 'How would you like to sort or filter the contacts?', Main suggestion: 'Give me 5 contacts from Apollo', Suggestions: ['Give me 5 contacts by username ascending where active is true', 'Give me 5 contacts by email with name and phone fields']
-                For query 'Give me 10 tickets', history: 'Give me 5 contacts sorted by name': Score <126, Question: 'Which service would you like tickets from, Freshdesk or another?', Main suggestion: 'Give me 10 tickets from Freshdesk', Suggestions: ['Give me 10 tickets from Apollo sorted by status where priority is high', 'Give me 10 tickets with priority and due date fields filtered by open status']
-                For query 'Give me 2 contacts', history: 'from Apollo': Score <126, Question: 'Which fields or filters should we include from apollo_contacts?', Main suggestion: 'Give me 2 contacts from Apollo with name and email', Suggestions: ['Give me 2 contacts from Apollo phone and creation date where verified is true', 'Give me 2 contacts from Apollo all available fields sorted by name']
-                For query 'Give me 6 tickets', history: '': Score <126, Question: 'Which service or additional details for the tickets?', Main suggestion: 'Give me 6 tickets from Freshdesk', Suggestions: ['Give me 6 tickets sorted by creation date where status is new', 'Give me 6 tickets with basic fields and detailed request info filtered by high priority']
-                For query 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', history: '': Score >=126 (understandable +30, service +30, sort +10, filtering +10, specific filter +10, one table +50 =140), Question: '', Main suggestion: 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Suggestions: ['Give me top 6 contacts from freshdesk_contacts where active is true', 'Give me 5 tickets from Freshdesk with priority and status fields sorted by due date']
-                For query 'Give me 5 contacts with basic fields and sort by creation date from apollo', history: '': Score >=126 (understandable +30, service +30, sort +10, basic fields +10, one table +50 =130), Question: '', Main suggestion: 'Give me 5 contacts with basic fields and sort by creation date from apollo', Suggestions: ['Give me 5 contacts with name and email fields sorted by name from apollo', 'Give me 5 contacts from apollo where active is true sorted by creation date']
+                For query 'Give me 5 contacts', Score <136 (e.g., understandable +30, multiple tables +10, no service/sort/fields/filter), Question: 'How would you like to sort or filter the contacts?', Main suggestion: 'Give me 5 contacts from Apollo', Suggestions: ['Give me 5 contacts by username ascending where active is true', 'Give me 5 contacts by email with name and phone fields']
+                For query 'Give me 10 tickets', Score <136, Question: 'Which service would you like tickets from, Freshdesk or another?', Main suggestion: 'Give me 10 tickets from Freshdesk', Suggestions: ['Give me 10 tickets from Apollo sorted by status where priority is high', 'Give me 10 tickets with priority and due date fields filtered by open status']
+                For query 'Give me 2 contacts', Score <136, Question: 'Which fields or filters should we include from apollo_contacts?', Main suggestion: 'Give me 2 contacts from Apollo with name and email', Suggestions: ['Give me 2 contacts from Apollo phone and creation date where verified is true', 'Give me 2 contacts from Apollo all available fields sorted by name']
+                For query 'Give me 6 tickets', Score <136, Question: 'Which service or additional details for the tickets?', Main suggestion: 'Give me 6 tickets from Freshdesk', Suggestions: ['Give me 6 tickets sorted by creation date where status is new', 'Give me 6 tickets with basic fields and detailed request info filtered by high priority']
+                For query 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Score >=136 (understandable +30, service +30, sort +10, filtering +10, specific filter +10, one table +50 =140), Question: '', Main suggestion: 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Suggestions: ['Give me top 6 contacts from freshdesk_contacts where active is true', 'Give me 5 tickets from Freshdesk with priority and status fields sorted by due date']
+                For query 'Give me 5 contacts with basic fields and sort by creation date from apollo', Score >=136 (understandable +30, service +30, sort +10, basic fields +10, one table +50 =130), Question: '', Main suggestion: 'Give me 5 contacts with basic fields and sort by creation date from apollo', Suggestions: ['Give me 5 contacts with name and email fields sorted by name from apollo', 'Give me 5 contacts from apollo where active is true sorted by creation date']
                 For nonsensical 'dfgjdfgklfd': Score=0, Question: 'Your query is unclear or no matching data was found. Could you please clarify your request?', Main suggestion: '', Suggestions: []
 
                 Output format:
-                {{""question"": ""question text"", ""main_suggestion"": ""main suggest text"", ""suggestions"": [""suggest1"", ""suggest2""]}}
+                {{{{""question"": ""question text"", ""main_suggestion"": ""main suggest text"", ""suggestions"": [""suggest1"", ""suggest2""]}}}}
             ";
 
             var messages = new[] { new UserChatMessage(prompt) };
