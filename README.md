@@ -50,8 +50,28 @@ NL2SQL is a comprehensive data synchronization and AI-powered SQL generation pla
 
 ![Architecture Diagram](./NL2SQL.WebApp/wwwroot/assets/images/schema.png)
 
-### External Service Integrations
+## Authentication
 
+NL2SQL uses **Azure Active Directory (Microsoft Entra ID)** for secure user authentication and authorization across the application. This enables single sign-on (SSO) and role-based access control for seamless and secure access to the platform.
+
+- **Frontend**: Utilizes the Microsoft Authentication Library (MSAL) for React to handle user login and acquire access tokens for API requests. Configured via environment variables (`VITE_AZURE_CLIENT_ID`, `VITE_AZURE_TENANT_ID`, `VITE_AZURE_API_SCOPE`) in the frontend's `.env.local` file.
+- **Backend**: Validates Azure AD-issued tokens to secure API endpoints, using settings specified in `appsettings.Development.json` (`AzureAd` section: `TenantId`, `ClientId`, `Audience`).
+- **Features**:
+  - Secure user authentication with Azure AD credentials.
+  - Token-based authorization for protected API routes.
+  - Support for organizational SSO and multi-tenant configurations.
+
+For configuration details, refer to the **Frontend configuration** and **Backend configuration** sections under **Getting Started**.
+
+## External Service Integrations
+
+The **NL2SQL** platform allows configuration of API keys and API URLs for external services (**Apollo, Freshdesk, Ortto, Pipedrive**) through the **Service Settings** section on the website at runtime. This enables dynamic management of service integrations without manually modifying configuration files. On the **Service Settings** page, users can input or update API keys and API URLs for each external service, and also enable or disable services to control which ones are active for data synchronization at any time. All settings are securely stored and used by the application for synchronization.
+
+**Benefits:**
+- Granular control over service integrations, enabling or disabling services as needed.  
+- Secure storage of API credentials within the application’s backend.
+
+**Services:**
 - **Apollo**: Contact and organization management
 - **Freshdesk**: Customer support ticket management
 - **Ortto**: Marketing automation and customer data
