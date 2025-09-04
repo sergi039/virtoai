@@ -54,6 +54,7 @@ export interface IAiGenerateService {
 
 export interface ITrainingAiService {
     saveTrainingData: (trainingDataToCreate: ITrainingAiData, token: string, abortSignal?: AbortSignal) => Promise<boolean>;
+    deleteTrainingData: (trainingDataToDelete: ITrainingAiData, token: string, abortSignal?: AbortSignal) => Promise<boolean>;
 }
 
 export interface ISpeechService {

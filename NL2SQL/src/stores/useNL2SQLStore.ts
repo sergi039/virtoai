@@ -63,6 +63,7 @@ export type NL2SQLState = {
   getAllNameDatabaseTables: () => Promise<string[]>;
 
   saveTrainingData: (addData: ITrainingAiData, abortSignal?: AbortSignal) => Promise<boolean>;
+  deleteTrainingData: (deleteData: ITrainingAiData, abortSignal?: AbortSignal) => Promise<boolean>;
 
   getAllRules: () => Promise<ISqlGenerationRule[]>;
   addRule: (rule: ISqlGenerationRule) => Promise<ISqlGenerationRule>;
@@ -272,7 +273,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getValidTokenApi: async () => {
     const state = get();
     const now = Date.now();
-    console.log('Token expires at:', (state.tokenApiExpiresAt - now) / 60000," minutes");
     if (!state.tokenApi || state.tokenApiExpiresAt - now < 60000) {
       await get().setTokenApi();
       return get().tokenApi;
@@ -673,6 +673,18 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     }
   },
 
+  deleteTrainingData: async (deleteData: ITrainingAiData, abortSignal?: AbortSignal) => {
+    set({ isLoading: true });
+    try {
+      const response = await trainingAiService.deleteTrainingData(deleteData, await get().getValidTokenApi(), abortSignal);
+      set({ isLoading: false });
+      return response;
+    } catch (error) {
+      set({ isLoading: false });
+      return false;
+    }
+  },
+
   getAllNameDatabaseTables: async () => {
     set({ isLoading: true });
     try {
@@ -796,7 +808,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
     try {
       if (!account || !instance) {
-        console.log('No account or instance available for Graph API');
         return;
       }
 
@@ -833,7 +844,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
     try {
       if (!account || !instance) {
-        console.log('No account or instance available for Graph API');
         return;
       }
 
@@ -936,11 +946,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
         isLoading: false
       });
 
-      console.log('📊 Database Schema loaded for Schema Editor:', {
-        databaseName: schema.databaseName,
-        tablesCount: schema.tables.length,
-        tables: schema.tables.map(t => t.name)
-      });
       return schema;
     } catch (error) {
       console.error('Error loading database schema for Schema Editor:', error);
@@ -1359,6 +1364,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     }
   },
 
+  // Text insertion methods
   insertTextToInput: (text) => {
     set({ textToInsert: text });
   },
@@ -1371,6 +1377,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     set({ textToInsert: '' });
   },
 
+  // Chat loading state management
   setChatLoading: (chatId, isLoading) => {
     set((state) => ({
       chatLoadingStates: {

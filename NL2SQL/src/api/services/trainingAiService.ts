@@ -9,4 +9,9 @@ export class TrainingAiServiceImplementation implements ITrainingAiService {
         const response = await dataService.post<boolean, ITrainingAiData>(endPoint, token, trainingDataToCreate, abortSignal);
         return response;
     }
+
+    async deleteTrainingData (trainingDataToDelete: ITrainingAiData, token: string, abortSignal?: AbortSignal) {
+        const response = await dataService.post<boolean, ITrainingAiData>(`${endPoint}/delete`, token, trainingDataToDelete, abortSignal);
+        return response;
+    }
 }
