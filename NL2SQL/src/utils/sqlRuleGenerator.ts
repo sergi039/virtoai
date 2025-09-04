@@ -11,6 +11,7 @@ export interface ISqlRuleGenerationParams {
     serviceTableId: number;
     relationType: RelationType;
     junctionTableName?: string;
+    isRequiredJoin?: boolean;
 }
 
 export class SqlRuleGenerator {
@@ -23,17 +24,28 @@ export class SqlRuleGenerator {
             joinType,
             serviceTableId,
             relationType,
-            junctionTableName
+            junctionTableName,
+            isRequiredJoin = true
         } = params;
 
         let ruleText: string;
 
-        if (relationType === RelationType.ManyToMany && junctionTableName) {
-            ruleText = `Always ${joinType} JOIN ${junctionTableName} ON ${sourceTableName}.${sourceColumnName} = ${junctionTableName}.${sourceColumnName} then ${joinType} JOIN ${targetTableName} ON ${junctionTableName}.${targetColumnName} = ${targetTableName}.${targetColumnName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from ${sourceTableName} and ${targetTableName}`;
-        } else if (joinType === JoinType.CROSS) {
-            ruleText = `Always CROSS JOIN ${targetTableName} with ${sourceTableName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from both tables`;
+        if (isRequiredJoin) {
+            if (relationType === RelationType.ManyToMany && junctionTableName) {
+                ruleText = `Always ${joinType} JOIN ${junctionTableName} ON ${sourceTableName}.${sourceColumnName} = ${junctionTableName}.${sourceColumnName} then ${joinType} JOIN ${targetTableName} ON ${junctionTableName}.${targetColumnName} = ${targetTableName}.${targetColumnName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from ${sourceTableName} and ${targetTableName}`;
+            } else if (joinType === JoinType.CROSS) {
+                ruleText = `Always CROSS JOIN ${targetTableName} with ${sourceTableName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from both tables`;
+            } else {
+                ruleText = `Always ${joinType} JOIN ${targetTableName} with ${sourceTableName} their link ${targetTableName}.${targetColumnName} = ${sourceTableName}.${sourceColumnName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from both tables`;
+            }
         } else {
-            ruleText = `Always ${joinType} JOIN ${targetTableName} with ${sourceTableName} their link ${targetTableName}.${targetColumnName} = ${sourceTableName}.${sourceColumnName} when selecting from ${sourceTableName}; if specific fields are requested, select only those; otherwise, include all fields from both tables`;
+            if (relationType === RelationType.ManyToMany && junctionTableName) {
+                ruleText = `Only trigger an automatic ${joinType} JOIN between ${sourceTableName} and ${targetTableName} through ${junctionTableName} on ${sourceTableName}.${sourceColumnName} = ${junctionTableName}.${sourceColumnName} and ${junctionTableName}.${targetColumnName} = ${targetTableName}.${targetColumnName} if the user's query explicitly requests to join, combine, or compare these two specific tables (or their obvious synonyms); if the user's SELECT statement specifies particular fields, use only those in the result set, but if no specific fields are requested (e.g., a SELECT * query), then include all columns from both tables in the output`;
+            } else if (joinType === JoinType.CROSS) {
+                ruleText = `Only trigger an automatic CROSS JOIN between ${sourceTableName} and ${targetTableName} if the user's query explicitly requests to join, combine, or compare these two specific tables (or their obvious synonyms); if the user's SELECT statement specifies particular fields, use only those in the result set, but if no specific fields are requested (e.g., a SELECT * query), then include all columns from both tables in the output`;
+            } else {
+                ruleText = `Only trigger an automatic ${joinType} JOIN between ${sourceTableName} and ${targetTableName} on ${sourceTableName}.${sourceColumnName} = ${targetTableName}.${targetColumnName} if the user's query explicitly requests to join, combine, or compare these two specific tables (or their obvious synonyms); if the user's SELECT statement specifies particular fields, use only those in the result set, but if no specific fields are requested (e.g., a SELECT * query), then include all columns from both tables in the output`;
+            }
         }
 
         return {

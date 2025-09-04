@@ -4,6 +4,6 @@ namespace NL2SQL.WebApp.Services.Import.Interfaces
 {
     public interface IApolloImportService
     {
-        Task<ApolloImportStatsModel> ImportApolloDataAsync(ApolloImportOptionsModel options);
+        Task<ApolloImportStatsModel> ImportApolloDataAsync(ApolloImportOptionsModel? options);
     }
 }

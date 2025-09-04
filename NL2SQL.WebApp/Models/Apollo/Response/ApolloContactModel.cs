@@ -19,9 +19,6 @@ namespace NL2SQL.WebApp.Models.Apollo.Response
         [JsonPropertyName("email")]
         public string Email { get; set; }
 
-        [JsonPropertyName("phone_numbers")]
-        public List<PhoneNumber> PhoneNumbers { get; set; }
-
         [JsonPropertyName("organization")]
         public ApolloOrganizationModel Organization { get; set; }
 
@@ -34,16 +31,16 @@ namespace NL2SQL.WebApp.Models.Apollo.Response
         [JsonPropertyName("country")]
         public string Country { get; set; }
 
-        [JsonPropertyName("created_at")]
-        public DateTime? CreatedAt { get; set; }
+        [JsonPropertyName("city")]
+        public string City { get; set; }
 
-        [JsonPropertyName("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
-    }
+        [JsonPropertyName("headline")]
+        public string Headline { get; set; }
 
-    public class PhoneNumber
-    {
-        [JsonPropertyName("value")]
-        public string Value { get; set; }
+        [JsonPropertyName("photo_url")]
+        public string PhotoUrl { get; set; }
+
+        [JsonPropertyName("email_status")]
+        public string EmailStatus { get; set; }
     }
 }

@@ -3,8 +3,6 @@ using NL2SQL.WebApp.Entities;
 using NL2SQL.WebApp.Models.Apollo.Response;
 using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Repositories.Interfaces;
-using NL2SQL.WebApp.Services.Interfaces;
-using NL2SQL.WebApp.Utils;
 using System.Linq.Expressions;
 using System.Text.Json;
 
@@ -13,14 +11,11 @@ namespace NL2SQL.WebApp.Repositories
     public class ApolloRepository : IApolloRepository
     {
         private readonly AppDbContext _context;
-        private readonly IApolloApiService _apiService;
         private const int DefaultRecordsCount = 0;
-        private const int ApiRequestDelayMs = 200;
 
-        public ApolloRepository(AppDbContext context, IApolloApiService apiService)
+        public ApolloRepository(AppDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _apiService = apiService ?? throw new ArgumentNullException(nameof(apiService));
         }
 
         public async Task<Dictionary<string, int>> GetCountsAsync()
@@ -35,7 +30,7 @@ namespace NL2SQL.WebApp.Repositories
 
         public async Task<int> ImportApolloDataAsync(IReadOnlyList<ApolloContactModel> contacts)
         {
-            if (contacts == null || !contacts.Any())
+            if (!contacts.Any())
                 return DefaultRecordsCount;
 
             var organizationsToImport = new Dictionary<string, ApolloOrganizationModel>();
@@ -62,11 +57,9 @@ namespace NL2SQL.WebApp.Repositories
 
             foreach (var orgPair in organizations)
             {
-                var orgId = orgPair.Key;
                 var orgData = orgPair.Value;
-                var fullOrgData = await _apiService.GetOrganizationAsync(orgId) ?? orgData;
+                var orgEntity = MapToOrganizationEntity(orgData);
 
-                var orgEntity = MapToOrganizationEntity(fullOrgData);
                 await UpsertEntityAsync(
                     _context.ApolloOrganizations,
                     orgEntity,
@@ -144,32 +137,10 @@ namespace NL2SQL.WebApp.Repositories
                     select 1 from apollo_pipedrive_mapping m where m.apollo_id = a.contact_id and m.pipedrive_id = p.contact_id
             )";
 
-            const string orgNameQuery = @"
-                insert into apollo_pipedrive_mapping (apollo_id, pipedrive_id, match_method, confidence, created_at)
-                select a.contact_id, p.contact_id, 'org_name', 0.4, now()
-                from apollo_contact a
-                join pipedrive_contact p on (
-                    a.organization_name is not null and
-                    p.organization_id is not null and
-                    exists (
-                        select 1 from pipedrive_organization o
-                        where o.id = p.organization_id and 
-                        lower(a.organization_name) = lower(o.name)
-                    ) and
-                    (
-                        lower(a.first_name) = lower(split_part(p.name, ' ', 1)) or
-                        lower(a.last_name) = lower(split_part(p.name, ' ', 2))
-                    )
-                )
-                where not exists (
-                    select 1 from apollo_pipedrive_mapping m where m.apollo_id = a.contact_id and m.pipedrive_id = p.contact_id
-            )";
-
             var emailMatches = await _context.Database.ExecuteSqlRawAsync(emailQuery);
             var nameMatches = await _context.Database.ExecuteSqlRawAsync(nameQuery);
-            var orgNameMatches = await _context.Database.ExecuteSqlRawAsync(orgNameQuery);
 
-            return emailMatches + nameMatches + orgNameMatches;
+            return emailMatches + nameMatches;
         }
 
         public async Task SetupDatabaseAsync()
@@ -190,14 +161,14 @@ namespace NL2SQL.WebApp.Repositories
                 LastName = contact.LastName,
                 Name = name,
                 Email = contact.Email ?? string.Empty,
-                Phone = contact.PhoneNumbers?.FirstOrDefault()?.Value,
-                OrganizationName = contact.Organization?.Name,
                 OrganizationId = contact.Organization?.Id,
                 Title = contact.Title,
                 LinkedInUrl = contact.LinkedInUrl,
                 Country = contact.Country,
-                CreatedAt = contact.CreatedAt != null ? DateHelper.ConvertToUtc(contact.CreatedAt ?? DateTime.UtcNow) : null,
-                UpdatedAt = contact.UpdatedAt != null ? DateHelper.ConvertToUtc(contact.UpdatedAt ?? DateTime.UtcNow) : null,
+                City = contact.City,
+                Headline = contact.Headline,
+                PhotoUrl = contact.PhotoUrl,
+                EmailStatus = contact.EmailStatus ?? string.Empty,
                 Data = JsonSerializer.Serialize(contact)
             };
         }
@@ -210,11 +181,11 @@ namespace NL2SQL.WebApp.Repositories
                 Name = org.Name,
                 WebsiteUrl = org.WebsiteUrl,
                 Industry = org.Industry,
-                Size = org.Size,
+                City = org.City,
+                Description = org.Description,
+                LogoUrl = org.LogoUrl,
                 Country = org.Country,
                 LinkedInUrl = org.LinkedInUrl,
-                CreatedAt = org.CreatedAt != null ? DateHelper.ConvertToUtc(org.CreatedAt ?? DateTime.UtcNow) : null,
-                UpdatedAt = org.UpdatedAt != null ? DateHelper.ConvertToUtc(org.UpdatedAt ?? DateTime.UtcNow) : null,
                 Data = JsonSerializer.Serialize(org)
             };
         }
@@ -242,13 +213,14 @@ namespace NL2SQL.WebApp.Repositories
             existing.LastName = entity.LastName;
             existing.Name = entity.Name;
             existing.Email = entity.Email ?? existing.Email;
-            existing.Phone = entity.Phone;
-            existing.OrganizationName = entity.OrganizationName;
+            existing.City = entity.City;
+            existing.Headline = entity.Headline;
+            existing.PhotoUrl = entity.PhotoUrl;
+            existing.EmailStatus = entity.EmailStatus;
             existing.OrganizationId = entity.OrganizationId;
             existing.Title = entity.Title;
             existing.LinkedInUrl = entity.LinkedInUrl;
             existing.Country = entity.Country;
-            existing.UpdatedAt = entity.UpdatedAt;
             existing.Data = entity.Data;
         }
 
@@ -257,11 +229,12 @@ namespace NL2SQL.WebApp.Repositories
             existing.Name = entity.Name;
             existing.WebsiteUrl = entity.WebsiteUrl;
             existing.Industry = entity.Industry;
-            existing.Size = entity.Size;
             existing.Country = entity.Country;
             existing.LinkedInUrl = entity.LinkedInUrl;
-            existing.UpdatedAt = entity.UpdatedAt;
             existing.Data = entity.Data;
+            existing.City = entity.City;
+            existing.LogoUrl = entity.LogoUrl;
+            existing.Description = entity.Description;
         }
     }
 }

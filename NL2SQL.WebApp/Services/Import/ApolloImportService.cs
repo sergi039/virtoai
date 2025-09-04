@@ -18,7 +18,7 @@ namespace NL2SQL.WebApp.Services.Import
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<ApolloImportStatsModel> ImportApolloDataAsync(ApolloImportOptionsModel options)
+        public async Task<ApolloImportStatsModel> ImportApolloDataAsync(ApolloImportOptionsModel? options)
         {
             var stats = new ApolloImportStatsModel();
 
@@ -28,34 +28,32 @@ namespace NL2SQL.WebApp.Services.Import
             if (options.Setup)
                 await _unitOfWork.Apollo.SetupDatabaseAsync();
 
-            List<ApolloContactModel> contacts = new List<ApolloContactModel>();
+            List<ApolloContactModel> contacts;
 
             if (!string.IsNullOrEmpty(options.Domain))
             {
                 contacts = await _apolloApiService.SearchContactsAsync(new Dictionary<string, object>
                 {
-                    { "q_organization_domains", options.Domain },
-                    { "page", 1 },
-                    { "per_page", options.Limit }
-                });
+                    { "q_organization_domains", options.Domain }
+                }, options.Limit);
             }
             else if (!string.IsNullOrEmpty(options.EmailDomain))
             {
                 contacts = await _apolloApiService.SearchContactsAsync(new Dictionary<string, object>
                 {
                     { "q_email_domains", options.EmailDomain },
-                    { "page", 1 },
-                    { "per_page", options.Limit }
-                });
+                }, options.Limit);
             }
             else if (!string.IsNullOrEmpty(options.NameUser))
             {
                 contacts = await _apolloApiService.SearchContactsAsync(new Dictionary<string, object>
                 {
                     { "q_keywords", options.NameUser },
-                    { "page", 1 },
-                    { "per_page", options.Limit }
-                });
+                }, options.Limit);
+            }
+            else
+            {
+                contacts = await _apolloApiService.SearchContactsAsync(new Dictionary<string, object>(), options.Limit);
             }
 
             if (!contacts.IsNullOrEmpty() && contacts.Any())

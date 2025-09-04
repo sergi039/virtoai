@@ -580,6 +580,28 @@ export const getStyles = (props: IMessageStyleProps): IMessageStyles => {
       whiteSpace: 'normal',
       transition: 'all 0.15s ease',
     },
+    aiSystemResponse: {
+      fontSize: '14px',
+      fontWeight: '400',
+      color: theme?.palette.neutralDark,
+      lineHeight: '1.5',
+      marginBottom: '12px',
+      padding: '0',
+    },
+    aiImproveSection: {
+      fontSize: '14px',
+      fontWeight: '400',
+      color: theme?.palette.neutralDark,
+      lineHeight: '1.5',
+      marginBottom: '8px',
+    },
+    aiQuestionItem: {
+      fontSize: '14px',
+      fontWeight: '400',
+      color: theme?.palette.neutralDark,
+      lineHeight: '1.5',
+      marginTop: '4px',
+    },
   };
 };
 

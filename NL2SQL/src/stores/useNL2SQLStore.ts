@@ -19,6 +19,7 @@ export type NL2SQLState = {
   currentTheme: ITheme;
   isLoading: boolean;
   tokenApi: string;
+  tokenApiExpiresAt: number;
   settings: IGeneralServiceSetting | null;
   isInitializeStore: boolean;
   currentAIModel: IAIModel | null;
@@ -34,6 +35,7 @@ export type NL2SQLState = {
   textToInsert: string;
 
   azureUser: any | null;
+  msalInstance?: any;
   userPhoto: string | null;
   userProfile: any | null;
   isUserDataLoading: boolean;
@@ -43,7 +45,8 @@ export type NL2SQLState = {
   databaseSchema: DatabaseSchemaResponse | null;
 
   getAllAIModels: () => IAIModel[];
-  setTokenApi: (instance?: any) => void;
+  setTokenApi: (instance?: any) => Promise<void>;
+  getValidTokenApi: (instance?: any) => Promise<string>;
   setCurrentAIModel: (model: IAIModel) => void;
   setSelectedAIModels: (models: IAIModel[]) => void;
   toggleTheme: () => void;
@@ -153,6 +156,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   currentTheme: lightTheme,
   isLoading: false,
   tokenApi: '',
+  tokenApiExpiresAt: 0,
   azureUser: null,
   userPhoto: null,
   userProfile: null,
@@ -175,10 +179,10 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
     if (accounts && instance && accounts.length > 0) {
       const azureUser = accounts[0];
-      set({ azureUser });
+      set({ azureUser, msalInstance: instance });
 
       try {
-        await get().setTokenApi(instance);
+        await get().setTokenApi();
       } catch (error) {
         console.error('Failed to acquire API token during initialization:', error);
       }
@@ -238,34 +242,42 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     }
   },
 
-  setTokenApi: async (instance: any) => {
+  setTokenApi: async () => {
+    const msal = get().msalInstance;
+    if (!msal) throw new Error('No MSAL instance available');
     try {
-      const accounts = instance.getAllAccounts();
+      const accounts = msal.getAllAccounts();
       if (accounts.length === 0) {
         throw new Error('No accounts found');
       }
-
       const account = accounts[0];
-
       const tokenRequest = {
-        scopes: ['api://7de745e7-97c4-4063-9ac2-e60d355a7a54/access_as_user'],
+        scopes: [import.meta.env.VITE_AZURE_API_SCOPE],
         account: account
       };
-
-      const token = await instance.acquireTokenSilent(tokenRequest);
-      set({ tokenApi: token.accessToken });
-
+      const token = await msal.acquireTokenSilent(tokenRequest);
+      set({ tokenApi: token.accessToken, tokenApiExpiresAt: token.expiresOn.getTime() });
     } catch (error) {
       try {
         const tokenRequest = {
-          scopes: ['api://7de745e7-97c4-4063-9ac2-e60d355a7a54/access_as_user'],
+          scopes: [import.meta.env.VITE_AZURE_API_SCOPE],
         };
-
-        await instance.acquireTokenRedirect(tokenRequest);
+        await msal.acquireTokenRedirect(tokenRequest);
       } catch (redirectError) {
         throw redirectError;
       }
     }
+  },
+
+  getValidTokenApi: async () => {
+    const state = get();
+    const now = Date.now();
+    console.log('Token expires at:', (state.tokenApiExpiresAt - now) / 60000," minutes");
+    if (!state.tokenApi || state.tokenApiExpiresAt - now < 60000) {
+      await get().setTokenApi();
+      return get().tokenApi;
+    }
+    return state.tokenApi;
   },
 
   getAllAIModels: () => get().aiModels,
@@ -273,7 +285,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAllSettings: async () => {
     set({ isLoading: true });
     try {
-      const generalSettings = await settingDataService.getGeneralServiceSetting(get().tokenApi);
+      const generalSettings = await settingDataService.getGeneralServiceSetting(await get().getValidTokenApi());
       set({ isLoading: false, settings: generalSettings });
       return generalSettings;
     } catch (error) {
@@ -285,7 +297,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getSpeechToken: async (abortSignal) => {
     set({ isLoading: true });
     try {
-      const result = await speechService.getToken(get().tokenApi, abortSignal);
+      const result = await speechService.getToken(await get().getValidTokenApi(), abortSignal);
       set({ isLoading: false });
       return result;
     } catch (error) {
@@ -303,7 +315,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAllRules: async () => {
     set({ isLoading: true });
     try {
-      const rules = await settingDataService.getAllRules(get().tokenApi);
+      const rules = await settingDataService.getAllRules(await get().getValidTokenApi());
       set({ isLoading: false, sqlgenerationRules: rules });
       return rules;
     } catch (error) {
@@ -315,7 +327,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   addRule: async (rule) => {
     set({ isLoading: true });
     try {
-      const newRule = await settingDataService.saveRule(rule, get().tokenApi);
+      const newRule = await settingDataService.saveRule(rule, await get().getValidTokenApi());
       set((state) => ({
         isLoading: false,
         sqlgenerationRules: [...state.sqlgenerationRules, newRule],
@@ -330,7 +342,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   editRule: async (ruleId, updatedData) => {
     set({ isLoading: true });
     try {
-      const updatedRule = await settingDataService.updateRule(ruleId, updatedData, get().tokenApi);
+      const updatedRule = await settingDataService.updateRule(ruleId, updatedData, await get().getValidTokenApi());
       set((state) => ({
         isLoading: false,
         sqlgenerationRules: state.sqlgenerationRules.map((rule) =>
@@ -347,7 +359,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   deleteRule: async (ruleId) => {
     set({ isLoading: true });
     try {
-      await settingDataService.delete(ruleId, get().tokenApi);
+      await settingDataService.delete(ruleId, await get().getValidTokenApi());
       set((state) => ({
         isLoading: false,
         sqlgenerationRules: state.sqlgenerationRules.filter((rule) => rule.id !== ruleId),
@@ -360,7 +372,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   refreshSettings: async () => {
     try {
-      const generalSettings = await settingDataService.getGeneralServiceSetting(get().tokenApi);
+      const generalSettings = await settingDataService.getGeneralServiceSetting(await get().getValidTokenApi());
       set({ settings: generalSettings });
     } catch (error) {
       throw new Error("Failed to refresh settings");
@@ -370,7 +382,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   syncApolloSettings: async (setting) => {
     set({ isLoading: true });
     try {
-      const response = await settingDataService.syncApolloSettings(setting, get().tokenApi);
+      const response = await settingDataService.syncApolloSettings(setting, await get().getValidTokenApi());
       set({ isLoading: false });
 
       if (response) {
@@ -387,7 +399,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   syncOrttoSettings: async (setting) => {
     set({ isLoading: true });
     try {
-      const response = await settingDataService.syncOrttoSettings(setting, get().tokenApi);
+      const response = await settingDataService.syncOrttoSettings(setting, await get().getValidTokenApi());
       set({ isLoading: false });
 
       if (response) {
@@ -404,7 +416,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   syncPipedriveSettings: async (setting) => {
     set({ isLoading: true });
     try {
-      const response = await settingDataService.syncPipedriveSettings(setting, get().tokenApi);
+      const response = await settingDataService.syncPipedriveSettings(setting, await get().getValidTokenApi());
       set({ isLoading: false });
 
       if (response) {
@@ -421,7 +433,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   syncFreshdeskSettings: async (setting) => {
     set({ isLoading: true });
     try {
-      const response = await settingDataService.syncFreshdeskSettings(setting, get().tokenApi);
+      const response = await settingDataService.syncFreshdeskSettings(setting, await get().getValidTokenApi());
       set({ isLoading: false });
 
       if (response) {
@@ -445,7 +457,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     set({ isLoading: true });
     try {
       const currentUser = get().currentUser;
-      const chats = await chatService.getAllWithMessagesByUserId(currentUser.id, get().tokenApi);
+  const chats = await chatService.getAllWithMessagesByUserId(currentUser.id, await get().getValidTokenApi());
       set({ chats, isLoading: false });
       return chats;
     } catch (error) {
@@ -457,7 +469,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getChatById: async (chatId) => {
     set({ isLoading: true });
     try {
-      const chat = await chatService.get(chatId, get().tokenApi);
+  const chat = await chatService.get(chatId, await get().getValidTokenApi());
       set({ isLoading: false });
       return chat;
     } catch (error) {
@@ -469,7 +481,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   addChat: async (chat) => {
     set({ isLoading: true });
     try {
-      const newChat = await chatService.save(chat, get().tokenApi);
+  const newChat = await chatService.save(chat, await get().getValidTokenApi());
 
       set((state) => ({
         chats: [...state.chats, newChat],
@@ -491,7 +503,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
       get().setChatLoading(requestToAi.chatId, true);
     }
     try {
-      const response = await aiGenerateService.generateSql(requestToAi, get().tokenApi);
+      const response = await aiGenerateService.generateSql(requestToAi, await get().getValidTokenApi());
       set({ isLoading: false });
       if (requestToAi.chatId) {
         get().setChatLoading(requestToAi.chatId, false);
@@ -509,7 +521,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   generateFieldContext: async (requestToAi: IRequestGenerateFieldContext) => {
     set({ isLoading: true });
     try {
-      const response = await aiGenerateService.generateFieldContext(requestToAi, get().tokenApi);
+      const response = await aiGenerateService.generateFieldContext(requestToAi, await get().getValidTokenApi());
       set({ isLoading: false });
       return response;
     } catch (error) {
@@ -524,7 +536,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
       get().setChatLoading(requestToAi.chatId, true);
     }
     try {
-      const response = await aiGenerateService.isCheckBrokeChain(requestToAi, get().tokenApi);
+      const response = await aiGenerateService.isCheckBrokeChain(requestToAi, await get().getValidTokenApi());
       set({ isLoading: false });
       if (requestToAi.chatId) {
         get().setChatLoading(requestToAi.chatId, false);
@@ -545,7 +557,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
       get().setChatLoading(requestToAi.chatId, true);
     }
     try {
-      const response = await aiGenerateService.generateClarifying(requestToAi, get().tokenApi);
+      const response = await aiGenerateService.generateClarifying(requestToAi, await get().getValidTokenApi());
       set({ isLoading: false });
       if (requestToAi.chatId) {
         get().setChatLoading(requestToAi.chatId, false);
@@ -563,7 +575,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   deleteChat: async (chatId) => {
     set({ isLoading: true });
     try {
-      await chatService.delete(chatId, get().tokenApi);
+      await chatService.delete(chatId, await get().getValidTokenApi());
       set((state) => ({
         chats: state.chats.filter((chat) => chat.id !== chatId),
         currentChat: state.currentChat?.id === chatId ? null : state.currentChat,
@@ -578,7 +590,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   editChat: async (chatId, updatedChat) => {
     set({ isLoading: true });
     try {
-      const editedChat = await chatService.update(chatId, get().tokenApi, updatedChat);
+      const editedChat = await chatService.update(chatId, await get().getValidTokenApi(), updatedChat);
       set((state) => {
         const updatedChats = state.chats.map((chat) => (chat.id === chatId ? editedChat : chat));
         const isCurrentChat = state.currentChat?.id === chatId;
@@ -605,7 +617,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   addMessage: async (message) => {
     set({ isLoading: true });
     try {
-      const newMessage = await messageService.save(message, get().tokenApi);
+      const newMessage = await messageService.save(message, await get().getValidTokenApi());
       set((state) => {
         const updatedChats = state.chats.map((chat) =>
           chat.id === state.currentChat?.id
@@ -630,7 +642,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   deleteMessage: async (messageId) => {
     set({ isLoading: true });
     try {
-      await messageService.delete(messageId, get().tokenApi);
+  await messageService.delete(messageId, await get().getValidTokenApi());
       set((state) => {
         const updatedChats = state.chats.map((chat) =>
           chat.id === state.currentChat?.id
@@ -652,7 +664,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   saveTrainingData: async (addData: ITrainingAiData, abortSignal?: AbortSignal) => {
     set({ isLoading: true });
     try {
-      const response = await trainingAiService.saveTrainingData(addData, get().tokenApi, abortSignal);
+      const response = await trainingAiService.saveTrainingData(addData, await get().getValidTokenApi(), abortSignal);
       set({ isLoading: false });
       return response;
     } catch (error) {
@@ -664,7 +676,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAllNameDatabaseTables: async () => {
     set({ isLoading: true });
     try {
-      const tables = await databaseInfoService.getAllTables(get().tokenApi);
+      const tables = await databaseInfoService.getAllTables(await get().getValidTokenApi());
       set({ isLoading: false });
       return tables;
     } catch (error) {
@@ -675,7 +687,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   editGeneralServiceSetting: async (setting) => {
     try {
-      const response = await settingDataService.updateGeneralServiceSetting(setting, get().tokenApi);
+      const response = await settingDataService.updateGeneralServiceSetting(setting, await get().getValidTokenApi());
 
       if (response) {
         await get().refreshSettings();
@@ -691,7 +703,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   editMessage: async (messageId, updatedMessage) => {
     set({ isLoading: true });
     try {
-      const editedMessage = await messageService.update(messageId, get().tokenApi, updatedMessage);
+      const editedMessage = await messageService.update(messageId, await get().getValidTokenApi(), updatedMessage);
       set((state) => {
         const updatedChats = state.chats.map((chat) =>
           chat.id === state.currentChat?.id
@@ -724,7 +736,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   editSqlMessage: async (sqlMessageId, updatedSql) => {
     set({ isLoading: true });
     try {
-      const editedSqlMessage = await messageService.updateSql(sqlMessageId, updatedSql, get().tokenApi);
+      const editedSqlMessage = await messageService.updateSql(sqlMessageId, updatedSql, await get().getValidTokenApi());
 
       set((state) => {
         const updatedChats = state.chats.map((chat) =>
@@ -856,7 +868,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAvailableTables: async () => {
     set({ isLoading: true });
     try {
-      const availableTables = await databaseInfoService.getAvailableTables(get().tokenApi);
+      const availableTables = await databaseInfoService.getAvailableTables(await get().getValidTokenApi());
       set({ isLoading: false });
       return availableTables;
     } catch (error) {
@@ -868,7 +880,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   executeSql: async (sql, abortSignal) => {
     set({ isLoading: true });
     try {
-      const result = await databaseInfoService.executeSql(sql, get().tokenApi, abortSignal);
+      const result = await databaseInfoService.executeSql(sql, await get().getValidTokenApi(), abortSignal);
       set({ isLoading: false });
       return result;
     } catch (error) {
@@ -885,9 +897,9 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getUserPhotoById: async (userId: string, abortSignal?: AbortSignal) => {
     try {
       const state = get();
-
-      if (state.tokenApi) {
-        const photoUrl = await azureGraphService.getUserPhoto(state.tokenApi, userId, abortSignal);
+      const validToken = await get().getValidTokenApi();
+      if (validToken) {
+        const photoUrl = await azureGraphService.getUserPhoto(validToken, userId, abortSignal);
 
         if (photoUrl) {
           const updatedUsers = state.azureUsers.map(user =>
@@ -918,7 +930,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getDatabaseSchemaForEditor: async () => {
     set({ isLoading: true });
     try {
-      const schema = await databaseInfoService.getDatabaseSchema(get().tokenApi);
+      const schema = await databaseInfoService.getDatabaseSchema(await get().getValidTokenApi());
       set({
         databaseSchema: schema,
         isLoading: false
@@ -940,7 +952,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getServiceRegistrations: async () => {
     set({ isLoading: true });
     try {
-      const registrations = await constructorService.getAllServices(get().tokenApi);
+      const registrations = await constructorService.getAllServices(await get().getValidTokenApi());
       set({ serviceRegistrations: registrations, isLoading: false });
       return registrations;
     } catch (error) {
@@ -952,7 +964,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   getTablesByServiceId: async (serviceId) => {
     try {
-      const tables = await constructorService.getTablesByServiceId(serviceId, get().tokenApi);
+      const tables = await constructorService.getTablesByServiceId(serviceId, await get().getValidTokenApi());
       return tables;
     } catch (error) {
       console.error('Error fetching tables by service ID:', error);
@@ -962,7 +974,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   createServiceTable: async (serviceTable, abortSignal) => {
     try {
-      const createdTable = await constructorService.createServiceTable(serviceTable, get().tokenApi, abortSignal);
+      const createdTable = await constructorService.createServiceTable(serviceTable, await get().getValidTokenApi(), abortSignal);
       return createdTable;
     } catch (error) {
       console.error('Error creating service table:', error);
@@ -972,7 +984,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   updateServiceTable: async (serviceTableId, serviceTable, abortSignal) => {
     try {
-      const updatedTable = await constructorService.updateServiceTable(serviceTableId, serviceTable, get().tokenApi, abortSignal);
+      const updatedTable = await constructorService.updateServiceTable(serviceTableId, serviceTable, await get().getValidTokenApi(), abortSignal);
       return updatedTable;
     } catch (error) {
       console.error('Error updating service table:', error);
@@ -982,7 +994,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   deleteServiceTable: async (serviceTableId, abortSignal) => {
     try {
-      const result = await constructorService.deleteServiceTable(serviceTableId, get().tokenApi, abortSignal);
+      const result = await constructorService.deleteServiceTable(serviceTableId, await get().getValidTokenApi(), abortSignal);
       return result;
     } catch (error) {
       console.error('Error deleting service table:', error);
@@ -992,7 +1004,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   getAllServiceTables: async (abortSignal) => {
     try {
-      const tables = await constructorService.getAllServiceTables(get().tokenApi, abortSignal);
+      const tables = await constructorService.getAllServiceTables(await get().getValidTokenApi(), abortSignal);
       return tables;
     } catch (error) {
       console.error('Error fetching all service tables:', error);
@@ -1007,7 +1019,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAllServiceTablesWithFields: async (abortSignal) => {
     set({ isLoading: true });
     try {
-      const tables = await constructorService.getAllServiceTablesWithFields(get().tokenApi, abortSignal);
+      const tables = await constructorService.getAllServiceTablesWithFields(await get().getValidTokenApi(), abortSignal);
       set({ serviceTables: tables, isLoading: false });
       return tables;
     } catch (error) {
@@ -1020,7 +1032,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   getAllServiceTableFields: async (abortSignal) => {
     set({ isLoading: true });
     try {
-      const fields = await constructorService.getAllServiceTableFields(get().tokenApi, abortSignal);
+      const fields = await constructorService.getAllServiceTableFields(await get().getValidTokenApi(), abortSignal);
       set({ serviceTableFields: fields, isLoading: false });
       return fields;
     } catch (error) {
@@ -1032,7 +1044,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   getServiceTableFields: async (serviceTableId, abortSignal) => {
     try {
-      const fields = await constructorService.getServiceTableFields(serviceTableId, get().tokenApi, abortSignal);
+      const fields = await constructorService.getServiceTableFields(serviceTableId, await get().getValidTokenApi(), abortSignal);
       return fields;
     } catch (error) {
       console.error('Error fetching service table fields:', error);
@@ -1043,7 +1055,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   createServiceTableField: async (serviceTableField, abortSignal) => {
     set({ isLoading: true });
     try {
-      const createdField = await constructorService.createServiceTableField(serviceTableField, get().tokenApi, abortSignal);
+      const createdField = await constructorService.createServiceTableField(serviceTableField, await get().getValidTokenApi(), abortSignal);
 
       set((state) => ({
         serviceTableFields: [...state.serviceTableFields, createdField],
@@ -1061,7 +1073,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   updateServiceTableField: async (id, serviceTableField, abortSignal) => {
     set({ isLoading: true });
     try {
-      const updatedField = await constructorService.updateServiceTableField(id, serviceTableField, get().tokenApi, abortSignal);
+    const updatedField = await constructorService.updateServiceTableField(id, serviceTableField, await get().getValidTokenApi(), abortSignal);
 
       set((state) => ({
         serviceTableFields: state.serviceTableFields.map(field =>
@@ -1081,7 +1093,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   deleteServiceTableField: async (id, abortSignal) => {
     set({ isLoading: true });
     try {
-      const result = await constructorService.deleteServiceTableField(id, get().tokenApi, abortSignal);
+      const result = await constructorService.deleteServiceTableField(id, await get().getValidTokenApi(), abortSignal);
 
       if (result) {
         set((state) => ({
@@ -1173,7 +1185,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   addChatUser: async (chatUser) => {
     set({ isLoading: true });
     try {
-      const newChatUser = await chatService.saveChatUser(chatUser, get().tokenApi);
+    const newChatUser = await chatService.saveChatUser(chatUser, await get().getValidTokenApi());
 
       set((state) => ({
         chats: state.chats.map((chat) =>
@@ -1196,7 +1208,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   createImplicitRelation: async (relation, abortSignal) => {
     try {
-      const newRelation = await constructorService.createImplicitRelation(relation, get().tokenApi, abortSignal);
+    const newRelation = await constructorService.createImplicitRelation(relation, await get().getValidTokenApi(), abortSignal);
 
       set((state) => ({
         serviceRegistrations: state.serviceRegistrations.map(service => ({
@@ -1234,7 +1246,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
 
   getAllImplicitRelations: async (abortSignal) => {
     try {
-      const relations = await constructorService.getAllImplicitRelations(get().tokenApi, abortSignal);
+    const relations = await constructorService.getAllImplicitRelations(await get().getValidTokenApi(), abortSignal);
       set((state) => ({
         serviceRegistrations: state.serviceRegistrations.map(service => ({
           ...service,
@@ -1253,7 +1265,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   removeChatUser: async (chatUserId) => {
     set({ isLoading: true });
     try {
-      const success = await chatService.deleteChatUser(chatUserId, get().tokenApi);
+    const success = await chatService.deleteChatUser(chatUserId, await get().getValidTokenApi());
 
       if (success) {
         set((state) => ({
@@ -1282,7 +1294,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   createFieldContextMenuItem: async (contextMenuItem, abortSignal) => {
     set({ isLoading: true });
     try {
-      const createdItem = await constructorService.createFieldContextMenuItem(contextMenuItem, get().tokenApi, abortSignal);
+    const createdItem = await constructorService.createFieldContextMenuItem(contextMenuItem, await get().getValidTokenApi(), abortSignal);
       
       set((state) => ({
         serviceTableFields: state.serviceTableFields.map(field =>
@@ -1304,7 +1316,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   updateFieldContextMenuItem: async (id, contextMenuItem, abortSignal) => {
     set({ isLoading: true });
     try {
-      const updatedItem = await constructorService.updateFieldContextMenuItem(id, contextMenuItem, get().tokenApi, abortSignal);
+    const updatedItem = await constructorService.updateFieldContextMenuItem(id, contextMenuItem, await get().getValidTokenApi(), abortSignal);
       
       set((state) => ({
         serviceTableFields: state.serviceTableFields.map(field => ({
@@ -1327,7 +1339,7 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
   deleteFieldContextMenuItem: async (id, abortSignal) => {
     set({ isLoading: true });
     try {
-      const result = await constructorService.deleteFieldContextMenuItem(id, get().tokenApi, abortSignal);
+    const result = await constructorService.deleteFieldContextMenuItem(id, await get().getValidTokenApi(), abortSignal);
       
       if (result) {
         set((state) => ({
@@ -1347,7 +1359,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     }
   },
 
-  // Text insertion methods
   insertTextToInput: (text) => {
     set({ textToInsert: text });
   },
@@ -1360,7 +1371,6 @@ export const useNL2SQLStore = create<NL2SQLState>()((set, get) => ({
     set({ textToInsert: '' });
   },
 
-  // Chat loading state management
   setChatLoading: (chatId, isLoading) => {
     set((state) => ({
       chatLoadingStates: {

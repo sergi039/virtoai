@@ -20,20 +20,20 @@ namespace NL2SQL.WebApp.Entities
         [Column("industry")]
         public string? Industry { get; set; }
 
-        [Column("size")]
-        public string? Size { get; set; }
-
         [Column("country")]
         public string? Country { get; set; }
+
+        [Column("city")]
+        public string? City { get; set; }
 
         [Column("linkedin_url")]
         public string? LinkedInUrl { get; set; }
 
-        [Column("created_at")]
-        public DateTime? CreatedAt { get; set; }
+        [Column("logo_url")]
+        public string? LogoUrl { get; set; }
 
-        [Column("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
+        [Column("short_description")]
+        public string? Description { get; set; }
 
         [Column("data")]
         public string Data { get; set; }

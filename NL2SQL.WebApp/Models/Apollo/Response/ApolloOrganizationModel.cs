@@ -16,19 +16,19 @@ namespace NL2SQL.WebApp.Models.Apollo.Response
         [JsonPropertyName("industry")]
         public string Industry { get; set; }
 
-        [JsonPropertyName("size")]
-        public string Size { get; set; }
-
         [JsonPropertyName("country")]
         public string Country { get; set; }
 
+        [JsonPropertyName("city")]
+        public string? City { get; set; }
+
         [JsonPropertyName("linkedin_url")]
-        public string LinkedInUrl { get; set; }
+        public string? LinkedInUrl { get; set; }
 
-        [JsonPropertyName("created_at")]
-        public DateTime? CreatedAt { get; set; }
+        [JsonPropertyName("logo_url")]
+        public string? LogoUrl { get; set; }
 
-        [JsonPropertyName("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
+        [JsonPropertyName("short_description")]
+        public string? Description { get; set; }
     }
 }

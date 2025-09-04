@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NL2SQL.WebApp.Models.Context;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NL2SQL.WebApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250825163957_UpdateFieldsApolloServices")]
+    partial class UpdateFieldsApolloServices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -765,6 +768,10 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
+                    b.Property<string>("OrganizationId")
+                        .HasColumnType("text")
+                        .HasColumnName("organization_id");
+
                     b.Property<string>("OrttoId")
                         .HasColumnType("text")
                         .HasColumnName("ortto_id");
@@ -865,6 +872,14 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date_created");
+
+                    b.Property<DateTime?>("DateUpdated")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date_updated");
+
                     b.Property<string>("Email")
                         .HasColumnType("text")
                         .HasColumnName("email");
@@ -880,6 +895,10 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<string>("OrttoId")
                         .HasColumnType("text")
                         .HasColumnName("ortto_id");
+
+                    b.Property<string>("SubscriptionStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("subscription_status");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

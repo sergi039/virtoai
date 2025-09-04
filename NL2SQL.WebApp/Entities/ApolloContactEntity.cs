@@ -23,12 +23,6 @@ namespace NL2SQL.WebApp.Entities
         [Column("email")]
         public string? Email { get; set; }
 
-        [Column("phone")]
-        public string? Phone { get; set; }
-
-        [Column("organization_name")]
-        public string? OrganizationName { get; set; }
-
         [Column("organization_id")]
         public string? OrganizationId { get; set; }
 
@@ -41,11 +35,17 @@ namespace NL2SQL.WebApp.Entities
         [Column("country")]
         public string? Country { get; set; }
 
-        [Column("created_at")]
-        public DateTime? CreatedAt { get; set; }
+        [Column("city")]
+        public string? City { get; set; }
 
-        [Column("updated_at")]
-        public DateTime? UpdatedAt { get; set; }
+        [Column("headline")]
+        public string? Headline { get; set; }
+
+        [Column("photo_url")]
+        public string? PhotoUrl { get; set; }
+
+        [Column("email_status")]
+        public string EmailStatus { get; set; }
 
         [Column("data")]
         public string Data { get; set; }
