@@ -8,6 +8,12 @@ from vanna.openai import OpenAI_Chat
 from vanna.qdrant import Qdrant_VectorStore
 from qdrant_client import QdrantClient
 from logger_config import get_logger
+import psycopg2
+from psycopg2 import pool
+import threading
+import os
+import json
+import requests
 
 load_dotenv()
 
@@ -16,13 +22,39 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
         Qdrant_VectorStore.__init__(self, config=config)
         OpenAI_Chat.__init__(self, config=config)
         self.postgres_conn_str = config.get('postgres_conn_str') if config else None
-        self.logger = get_logger("vanna_local_ai")
+        self.logger = get_logger("vanna_openrouter")
         
         if self.postgres_conn_str:
             self.logger.info(f"Connection string configured: {self.postgres_conn_str[:50]}...")
+            
+            try:
+                self.connection_pool = pool.ThreadedConnectionPool(
+                    minconn=1,
+                    maxconn=10,
+                    dsn=self.postgres_conn_str
+                )
+                self.logger.info("Connection pool initialized successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize connection pool: {e}")
+                raise
+            
+            try:
+                self.connect_to_postgres(
+                    host=os.getenv('POSTGRES_HOST'),
+                    dbname=os.getenv('POSTGRES_DB'),
+                    user=os.getenv('POSTGRES_USER'),
+                    password=os.getenv('POSTGRES_PASSWORD'),
+                    port=os.getenv('POSTGRES_PORT'),
+                )
+                self.logger.info("Vanna connected to PostgreSQL successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to connect Vanna to PostgreSQL: {e}")
+                
         else:
             self.logger.error("No postgres_conn_str provided in config")
             raise ValueError("No postgres_conn_str provided in config")
+        
+        self.db_lock = threading.Lock()
         
         self.model = config.get('model') if config and 'model' in config else os.getenv('OPENROUTER_MODEL', 'cloudflare@cf-meta-llama-3-8b-instruct')
         if not self.model:
@@ -33,41 +65,64 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
         if not self.api_url:
             self.logger.error("No API URL specified in environment variables")
             raise ValueError("API URL must be specified in environment variables")
+    
+    def get_connection(self):
+        return self.connection_pool.getconn()
+
+    def release_connection(self, conn):
+        self.connection_pool.putconn(conn)
 
     def initialize(self):
         self.train_schema()
+        self.train_examples_from_sql_table()
         rules = self.get_active_rules()
         for rid, text in rules.items():
             if not self.is_rule_trained(rid):
                 self.train(documentation=f"RULE {rid}: {text}")
 
-    def train_examples_from_json(self):
+    def train_examples_from_sql_table(self):
+        conn = None
         try:
-            json_path = os.path.join(os.path.dirname(__file__), "training_examples.json")
-            if os.path.exists(json_path):
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    examples = json.load(f)
-                
-                for example in examples:
-                    question = example.get('question')
-                    sql = example.get('sql')
-                    if question and sql:
-                        if not self.is_example_trained(question, sql):
-                            self.train(question=question, sql=sql)
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT natural_language_query, generated_sql
+                FROM sql_training_data
+            """)
+            rows = cursor.fetchall()
+            for nlq, gensql in rows:
+                if not nlq or not gensql:
+                    continue
+                if self.is_example_trained(nlq, gensql):
+                    self.logger.debug("Skipping already trained example (DB): %s", nlq[:80])
+                    continue
+                try:
+                    self.train(question=nlq, sql=gensql)
+                    self.logger.info("Trained example from DB: %s", nlq[:80])
+                except Exception as ex:
+                    self.logger.warning("Failed to train example: %s; error: %s", nlq[:80], str(ex))
+            cursor.close()
         except Exception as e:
-            self.logger.error(f"Error loading training examples: {str(e)}")
-
+            self.logger.error(f"Error loading training examples from sql_training_data: {e}", exc_info=True)
+        finally:
+            if conn:
+                self.release_connection(conn)
+                
     def get_active_rules(self):
         rules = {}
+        conn = None
         try:
-            conn = psycopg2.connect(self.postgres_conn_str)
+            conn = self.get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT id, text FROM sql_generation_rule WHERE is_active = TRUE")
             for rid, text in cursor.fetchall():
                 rules[rid] = text
-            conn.close()
+            cursor.close()
         except Exception as e:
             self.logger.error(f"Error loading rules: {str(e)}")
+        finally:
+            if conn:
+                self.release_connection(conn)
         return rules
 
     def train_schema(self):
@@ -157,19 +212,42 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
     def is_example_trained(self, question, sql):
         try:
             training_data = self.get_training_data()
-            return any(
-                question in str(data.get('question', '')) and sql in str(data.get('sql', ''))
-                for data in training_data
-            )
-        except Exception as e:
-            self.logger.error(f"Error checking example: {str(e)}")
+            for data in training_data:
+                payload = data.get('payload', {}) if isinstance(data, dict) else {}
+                existing_q = str(payload.get('question', '')).strip()
+                existing_s = str(payload.get('sql', '')).strip()
+                if question.strip() == existing_q and sql.strip() == existing_s:
+                    return True
             return False
+        except Exception as e:
+            self.logger.warning(f"Error checking example: {e}")
+            return False
+    
+    def get_related_training_data(self, question: str, limit: int = 5):
+        try:
+            similar_questions = self.get_similar_question_sql(question)
+            if similar_questions:
+                return similar_questions[:limit]
+
+            training_data = self.get_training_data()
+            sql_examples = []
+            for data in training_data:
+                payload = data.get('payload', {}) if isinstance(data, dict) else {}
+                if payload.get('question') and payload.get('sql'):
+                    sql_examples.append(data)
+                    if len(sql_examples) >= limit:
+                        break
+            
+            return sql_examples
+        except Exception as e:
+            self.logger.warning(f"Error getting related training data: {e}")
+            return []
         
     def generate_sql(self, question: str, chat_id: int = None, **kwargs) -> str:
         self.logger.info(f"SQL generation request: {question}, chat_id: {chat_id}")
 
         enhanced_question = f"""
-            You are a helpful assistant. Below is the chat history and the user's question.
+            You are a helpful assistant.
 
             User's Question:
             {question}
@@ -238,16 +316,52 @@ class MyVanna(Qdrant_VectorStore, OpenAI_Chat):
         self.logger.info("=== Starting prompt processing ===")
 
         messages = []
+        sql_examples = ""
+        user_question = ""
         
         if isinstance(prompt, list):
             for message in prompt:
                 if isinstance(message, dict) and 'role' in message and 'content' in message:
                     messages.append(message)
+                    if message.get('role') == 'user':
+                        user_question = message.get('content', '')
             if not messages or messages[-1].get('role') != 'user':
                 prompt_text = "\n".join([str(item) for item in prompt])
                 messages.append({"role": "user", "content": prompt_text})
+                user_question = prompt_text
         else:
             messages.append({"role": "user", "content": str(prompt)})
+            user_question = str(prompt)
+        
+        try:
+            if user_question:
+                related_sql_examples = self.get_related_training_data(user_question)
+                if related_sql_examples:
+                    sql_examples = "\n### SQL Examples:\n"
+                    for i, example in enumerate(related_sql_examples[:3], 1):  # Ограничиваем 3 примерами
+                        payload = example.get('payload', {}) if isinstance(example, dict) else {}
+                        question = payload.get('question', '')
+                        sql = payload.get('sql', '')
+                        if question and sql:
+                            sql_examples += f"Example {i}:\nQuestion: {question}\nSQL: {sql}\n\n"
+                    self.logger.info(f"Added {len(related_sql_examples)} SQL examples to prompt")
+        except Exception as e:
+            self.logger.warning(f"Error getting SQL examples: {e}")
+        
+        if sql_examples and messages:
+            system_message_found = False
+            for i, message in enumerate(messages):
+                if message.get('role') == 'system':
+                    messages[i]['content'] += sql_examples
+                    system_message_found = True
+                    break
+            
+            if not system_message_found:
+                system_message = {
+                    "role": "system",
+                    "content": f"You are a helpful SQL assistant.{sql_examples}"
+                }
+                messages.insert(0, system_message)
         
         self.logger.info(f"Final prompt with {len(messages)} messages")
         self.logger.info(f"Model use: {self.model}")

@@ -82,6 +82,8 @@ namespace NL2SQL.WebApp.Mapper
 
             CreateMap<SqlOperationResultModel, SqlOperationResultDto>();
 
+            CreateMap<RemoveSqlTrainingDataDto, RemoveSqlTrainingDataModel>();
+
             CreateMap<RowDataDto, RowDataModel>();
 
             CreateMap<RequestGenerateFieldContextDto, RequestGenerateFieldContextModel>();

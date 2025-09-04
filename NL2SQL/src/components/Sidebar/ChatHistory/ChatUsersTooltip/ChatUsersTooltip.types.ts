@@ -19,10 +19,13 @@ export interface IChatUsersTooltipStyleProps {
 export interface IChatUsersTooltipStyles {
   content: IStyle;
   header: IStyle;
+  headerLeft: IStyle;
+  backIcon: IStyle;
   searchBox: IStyle;
   usersList: IStyle;
   userItem: IStyle;
   userItemSelected: IStyle;
+  selectableUserItem: IStyle;
   userAvatar: IStyle;
   userInfo: IStyle;
   userName: IStyle;

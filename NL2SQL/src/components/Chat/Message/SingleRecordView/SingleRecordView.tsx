@@ -3,6 +3,7 @@ import { Stack, Text } from '@fluentui/react';
 import type { ISingleRecordViewProps } from './SingleRecordView.types';
 import { getStyles } from './SingleRecordView.styles';
 import { DateChatUtils } from '../../../../utils/dateChatUtils';
+import { ValueUtils } from '../../../../utils/valueUtils';
 
 const SingleRecordView: React.FunctionComponent<ISingleRecordViewProps> = ({
   record,
@@ -28,7 +29,7 @@ const SingleRecordView: React.FunctionComponent<ISingleRecordViewProps> = ({
         const value = record[field];
         let displayValue = strings.Chat.notAvailable;
 
-        if (value != null) {
+        if (!ValueUtils.isNullValue(value)) {
           if (typeof value === 'object') {
             displayValue = JSON.stringify(value);
           } else {
@@ -73,7 +74,7 @@ const SingleRecordView: React.FunctionComponent<ISingleRecordViewProps> = ({
             >
               {capitalizeFirstLetter(field)}:
             </Text>
-            {isClickable && value != null ? (
+            {isClickable && !ValueUtils.isNullValue(value) ? (
               <Text
                 variant="medium"
                 style={styles.redirectText}

@@ -33,6 +33,7 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
   const [isAddMode, setIsAddMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isAddingUsers, setIsAddingUsers] = useState(false);
 
   const styleProps: IChatUsersTooltipStyleProps = { theme: customTheme || currentTheme };
   const classNames = getClassNames(getStyles, styleProps);
@@ -70,6 +71,15 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
       );
   }, [azureUsers, searchQuery, chat.userOwnerId, chat.chatUsers]);
 
+  const availableUsersToAdd = useMemo(() => {
+    const existingUserIds = new Set([
+      chat.userOwnerId,
+      ...(chat.chatUsers?.map(cu => cu.userId) || [])
+    ]);
+    
+    return azureUsers.filter(user => !existingUserIds.has(user.id));
+  }, [azureUsers, chat.userOwnerId, chat.chatUsers]);
+
   const handleAddPeople = useCallback(() => {
     setIsAddMode(true);
     setSearchQuery('');
@@ -80,6 +90,7 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
     setIsAddMode(false);
     setSearchQuery('');
     setSelectedUserIds([]);
+    setIsAddingUsers(false); 
   }, []);
 
   const handleSearchChange = useCallback((_: any, newValue?: string) => {
@@ -87,19 +98,40 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
   }, []);
 
   const handleUserSelect = useCallback((userId: string) => {
+    if (isAddingUsers) return; 
+    
     setSelectedUserIds(prev => 
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
-  }, []);
+  }, [isAddingUsers]);
 
   const handleSaveSelection = useCallback(async () => {
+    if (isAddingUsers) return; 
+    
     if (onAddUsers && selectedUserIds.length > 0) {
-      await onAddUsers(selectedUserIds);
+      const existingUserIds = new Set([
+        chat.userOwnerId,
+        ...(chat.chatUsers?.map(cu => cu.userId) || [])
+      ]);
+      
+      const usersToAdd = selectedUserIds.filter(userId => !existingUserIds.has(userId));
+      
+      if (usersToAdd.length > 0) {
+        setIsAddingUsers(true); 
+        try {
+          await onAddUsers(usersToAdd);
+          setSelectedUserIds([]);
+        } catch (error) {
+          return;
+        } finally {
+          setIsAddingUsers(false); 
+        }
+      }
     }
     handleBackToList();
-  }, [selectedUserIds, onAddUsers, handleBackToList]);
+  }, [selectedUserIds, onAddUsers, chat.userOwnerId, chat.chatUsers, handleBackToList, isAddingUsers]);
 
   const handleLeave = async () => {
     const currentUserId = getCurrentUserId();
@@ -138,13 +170,13 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
     >
       <Stack className={classNames.content}>
         <Stack className={classNames.header} horizontal horizontalAlign="space-between" verticalAlign="center">
-          <Stack horizontal verticalAlign="center" style={{ flex: 1 }}>
+          <Stack horizontal verticalAlign="center" className={classNames.headerLeft}>
             {isAddMode ? (
               <>
                 <Icon
                   iconName="ChevronLeft"
                   onClick={handleBackToList}
-                  style={{ cursor: 'pointer', marginRight: '8px', fontSize: '14px' }}
+                  className={classNames.backIcon}
                 />
                 <Text>{strings.Chat.ToolTips.addPeople}</Text>
               </>
@@ -176,9 +208,12 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
                       key={user.id}
                       className={`${classNames.userItem} ${
                         selectedUserIds.includes(user.id) ? classNames.userItemSelected : ''
-                      }`}
+                      } ${classNames.selectableUserItem} ${isAddingUsers ? 'disabled' : ''}`}
                       onClick={() => handleUserSelect(user.id)}
-                      style={{ cursor: 'pointer' }}
+                      style={{ 
+                        opacity: isAddingUsers ? 0.6 : 1,
+                        pointerEvents: isAddingUsers ? 'none' : 'auto'
+                      }}
                     >
                       {user.photoUrl ? (
                         <img
@@ -220,15 +255,16 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
             <div className={classNames.footer}>
               <div className={classNames.actions}>
                 <PrimaryButton
-                  text={`${strings.btnAdd} (${selectedUserIds.length})`}
+                  text={isAddingUsers ? strings.addProcess : `${strings.btnAdd} (${selectedUserIds.length})`}
                   onClick={handleSaveSelection}
-                  disabled={selectedUserIds.length === 0}
+                  disabled={selectedUserIds.length === 0 || isAddingUsers}
                   styles={styleNames.saveButton}
                 />
                 <DefaultButton
                   text={strings.btnCancel}
                   onClick={handleBackToList}
                   styles={styleNames.cancelButton}
+                  disabled={isAddingUsers}
                 />
               </div>
             </div>
@@ -252,7 +288,9 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
 
                   <Stack className={classNames.userInfo}>
                     <Stack className={classNames.userName}>{chatOwner.name}</Stack>
-                    <Stack className={classNames.userRole}>{strings.Chat.ToolTips.youLabel}</Stack>
+                    <Stack className={classNames.userRole}>
+                      {currentUser?.id === chat.userOwnerId ? strings.Chat.ToolTips.youLabel : strings.Chat.ToolTips.ownerName}
+                    </Stack>
                   </Stack>
                 </div>
               )}
@@ -302,6 +340,7 @@ const ChatUsersTooltipBase: React.FunctionComponent<IChatUsersTooltipProps> = ({
                     onClick={handleAddPeople}
                     styles={styleNames.addButton}
                     iconProps={{ iconName: 'Add' }}
+                    disabled={availableUsersToAdd.length === 0}
                   />
                 )}
                 {!isOwner && (

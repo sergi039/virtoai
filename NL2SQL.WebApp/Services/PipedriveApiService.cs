@@ -28,8 +28,7 @@ namespace NL2SQL.WebApp.Services
             var parameters = new Dictionary<string, string>
             {
                 { "api_token", apiKey },
-                { "sort_by", "add_time" },
-                { "sort_direction", "desc" }
+                { "sort", "add_time DESC" }
             };
 
             if (!string.IsNullOrEmpty(since))

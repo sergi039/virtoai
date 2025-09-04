@@ -69,7 +69,7 @@ namespace NL2SQL.WebApp.Services.Import
 
         private async Task<int> ImportContactsAsync(bool verifySsl, int limit)
         {
-            int totalImported = 0;
+            var totalImported = 0;
 
             while (true)
             {
@@ -87,7 +87,7 @@ namespace NL2SQL.WebApp.Services.Import
 
         private async Task<int> ImportCompaniesAsync(bool verifySsl, int limit)
         {
-            int totalImported = 0;
+            var totalImported = 0;
 
             while (true)
             {

@@ -308,7 +308,7 @@ namespace NL2SQL.WebApp.Services
             }
         }
 
-        public async Task<GenerateClarifyingModel> GenerateClarifyingAsync(string userQuery, int chatId)
+        public async Task<GenerateClarifyingModel> GenerateClarifyingAsync(string userQuery, int chatId, string? userName, string? userEmail)
         {
             var informationForQuery = await _vannaService.ExtractKnowledgeAsync(userQuery);
 
@@ -325,50 +325,53 @@ namespace NL2SQL.WebApp.Services
             var ddlInfo = string.Join("\n\n", informationForQuery.Ddl);
 
             var prompt = $@"
-                You are an AI assistant that generates exactly one clarifying question, one main suggested refinement (the most suitable based on the query, DDL, and history), and two diverse additional suggested refinements to resolve ambiguities in a user's natural language query. Use the database schema (DDL) for tables, fields, and services (from table prefixes like 'apollo' for Apollo or 'freshdesk' for Freshdesk), and incorporate the recent chat history to build on previous clarifications, ensure continuity in the conversation chain, and avoid repetition.
+                You are an AI assistant designed to generate exactly one clarifying question, one primary suggested refinement (the most appropriate based on the query, DDL, and conversation history), and two diverse additional suggested refinements to address ambiguities in a user's natural language query. Utilize the database schema (DDL) for tables, fields, and services (identified by table prefixes such as 'apollo' for Apollo or 'freshdesk' for Freshdesk), and incorporate the recent chat history to maintain continuity, build upon prior clarifications, and prevent repetition.
+               
+                User personal information: Name: {userName ?? "unknown"}, Email: {userEmail ?? "unknown"}
                 User query: '{userQuery}'
                 Database schema (DDL):
                 {ddlInfo}
-                Task:
 
-                First, evaluate the clarity of the user query using a capping system:
+                Personalization:
+                Always rigorously evaluate the user query for possessive or personal pronouns and indicators such as 'my', 'mine', 'me', 'I', or similar terms (e.g., 'for me', 'mine own', or contextual equivalents) that suggest the data pertains to the user personally. If any such terms are detected, you must invariably append a personalization phrase to the main suggestion, such as 'for {userName ?? "unknown"}' or 'for {userEmail ?? "unknown"}' (prioritize the name if available; otherwise, use the email), without altering fields or filters. If no valid personal information is available or it is marked as unknown, generate a clarifying question to inquire about it (e.g., 'Could you provide your name or email for personalization?'). Additionally, for ticket-related queries, consider incorporating SLA (Service Level Agreement) fields from the DDL where relevant, such as filtering by SLA status or deadlines. Under no circumstances should you insert the user's personal information (userName or userEmail) into the additional suggestions, even if the query implies personal data.
+                First, assess the clarity of the user query using a scoring system:
 
-                If the query is understandable (makes sense and relates to DDL): +30 points.
-                If a service name is specified (e.g., 'Freshdesk' or 'Apollo'): +30 points.
-                If the word 'sort' or equivalent (e.g., 'sorted by', 'order by') is mentioned: +10 points.
-                If filtering is mentioned (e.g., word 'where', 'filter by', 'with condition', etc.): +10 points.
-                If specific filter conditions are specified (e.g., 'where status is open', 'filter by priority high'): up to +20 points (e.g., 10 per condition mentioned, max 20).
-                If specific fields are specified (e.g., 'with priority and status'): up to +20 points (e.g., 10 per field mentioned, max 20).
-                If 'basic fields' or 'all fields' is mentioned: +10 points.
-                If the main entity (e.g., 'tickets' or 'contacts') maps to only one table in DDL: +50 points.
-                If multiple tables exist for the entity (e.g., freshdesk_contacts and apollo_contacts) and no service is specified: +10 points (low score indicates ambiguity).
-                Total score: Sum the points. Max possible score: 180. If nonsensical/invalid, score = 0.
+                If the query is comprehensible and aligns with the DDL: +30 points.
+                If a service name is explicitly stated (e.g., 'Freshdesk' or 'Apollo'): +30 points.
+                If sorting is indicated (e.g., 'sort', 'sorted by', 'order by'): +10 points.
+                If filtering is mentioned (e.g., 'where', 'filter by', 'with condition'): +10 points.
+                If specific filter conditions are provided (e.g., 'where status is open', 'filter by priority high'): up to +20 points (e.g., +10 per condition, maximum 20).
+                If specific fields are specified (e.g., 'with priority and status'): up to +20 points (e.g., +10 per field, maximum 20).
+                If 'basic fields' or 'all fields' is referenced: +10 points.
+                If the primary entity (e.g., 'tickets' or 'contacts') corresponds to only one table in the DDL: +50 points.
+                If multiple tables exist for the entity (e.g., freshdesk_contacts and apollo_contacts) and no service is specified: +10 points (indicating potential ambiguity).
+                Total score: Calculate the sum. Maximum possible score: 180. If the query is nonsensical or invalid, assign a score of 0.
 
-                If total score >= 136 (70% clarity, query is sufficiently clear):
+                If the total score >= 136 (indicating at least 70% clarity, sufficiently unambiguous query):
 
-                Set clarifying question to empty string.
-                Set main suggestion to the original user query (as is, without any changes or additions).
-                Generate two diverse suggested refinements as full, complete query phrases that are related to the same table/service or adjacent tables from the same service (e.g., if query is about tickets from Freshdesk, suggest queries about contacts from Freshdesk or variations like top N sorted differently, with different filters, fields, or services for diversity).
+                Set the clarifying question to an empty string.
+                If possessive or personal indicators (e.g., 'my', 'mine', 'me', 'I') are present, form the main suggestion by appending the personalization phrase 'for {userName ?? "unknown"}' or 'for {userEmail ?? "unknown"}' to the original query.
+                If no such personal indicators are detected, set the main suggestion to the original user query unchanged, unless personalization applies based on the check.
+                Generate two diverse additional suggested refinements as complete, self-contained query phrases related to the same table/service or adjacent tables from the same service (e.g., for a Freshdesk tickets query, suggest variations involving Freshdesk contacts or alternative sorting, filters, fields, or services for diversity).
 
-                If total score < 136 (ambiguities exist):
+                If the total score < 136 (indicating ambiguities):
 
-                Generate exactly one clarifying question that asks for details on sorting, fields, filtering, or services, referencing specific DDL elements (e.g., 'How would you like to sort the contacts from apollo_contacts?', 'Which fields from freshdesk_tickets would you like to include, such as priority or status?', 'What filtering conditions would you like to apply, such as where status is open?').
-                Generate exactly one main suggested refinement and two diverse additional suggested refinements. Each must be a full, complete query phrase that always incorporates the original user query verbatim as its base, always appending additional words in a natural way to resolve ambiguities (e.g., if user query is 'give me 6 tickets', main: 'give me 6 tickets from Freshdesk'). Base them on DDL tables/fields/services, make them varied (e.g., different sorting fields or directions, different fields, different filtering conditions like 'where' clauses, different services), ensure they fit seamlessly into the conversation chain without repeating history.
-                The main suggestion must always start with the exact user query and append additional words for the most fitting minimal refinement based on common patterns, history, and DDL to resolve the main ambiguity (e.g., prioritize adding just the service if unspecified, without over-adding extras like sort or filter unless that's the primary missing element; do not add multiple refinements unless necessary).
+                Generate exactly one clarifying question focused on resolving key uncertainties, such as sorting, fields, filtering, or services, while referencing specific DDL elements (e.g., 'How would you like to sort the contacts from apollo_contacts?', 'Which fields from freshdesk_tickets would you like to include, such as priority or status?', 'What filtering conditions would you like to apply, such as where status is open?').
+                Generate exactly one primary suggested refinement and two diverse additional suggested refinements. Each must be a complete query phrase that incorporates the original user query verbatim as its foundation, appending additional details naturally to resolve ambiguities (e.g., if the user query is 'give me 6 tickets', main: 'give me 6 tickets from Freshdesk'). Draw from DDL tables, fields, and services; ensure variety (e.g., different sorting fields/directions, fields, filtering conditions like 'where' clauses, or services), and align them with the conversation history without repetition.
+                The primary suggestion must always begin with the exact user query and append minimal, targeted refinements to address the core ambiguity (e.g., prioritize adding the service if unspecified; avoid unnecessary additions like sorting or filtering unless they resolve the primary issue).
 
-                If the query is nonsensical/invalid (e.g., 'dfgjdfgklfd', score=0): generate one question to clarify, an empty main suggestion, and no additional suggestions.
+                If the query is nonsensical or invalid (e.g., 'dfgjdfgklfd', score=0): Generate one clarifying question, set the main suggestion to an empty string, and provide no additional suggestions.
                 Examples:
-
-                For query 'Give me 5 contacts', Score <136 (e.g., understandable +30, multiple tables +10, no service/sort/fields/filter), Question: 'How would you like to sort or filter the contacts?', Main suggestion: 'Give me 5 contacts from Apollo', Suggestions: ['Give me 5 contacts by username ascending where active is true', 'Give me 5 contacts by email with name and phone fields']
+                For query 'Give me 5 contacts', Score <136 (e.g., comprehensible +30, multiple tables +10, no service/sort/fields/filter), Question: 'How would you like to sort or filter the contacts?', Main suggestion: 'Give me 5 contacts from Apollo', Suggestions: ['Give me 5 contacts by username ascending where active is true', 'Give me 5 contacts by email with name and phone fields']
                 For query 'Give me 10 tickets', Score <136, Question: 'Which service would you like tickets from, Freshdesk or another?', Main suggestion: 'Give me 10 tickets from Freshdesk', Suggestions: ['Give me 10 tickets from Apollo sorted by status where priority is high', 'Give me 10 tickets with priority and due date fields filtered by open status']
                 For query 'Give me 2 contacts', Score <136, Question: 'Which fields or filters should we include from apollo_contacts?', Main suggestion: 'Give me 2 contacts from Apollo with name and email', Suggestions: ['Give me 2 contacts from Apollo phone and creation date where verified is true', 'Give me 2 contacts from Apollo all available fields sorted by name']
                 For query 'Give me 6 tickets', Score <136, Question: 'Which service or additional details for the tickets?', Main suggestion: 'Give me 6 tickets from Freshdesk', Suggestions: ['Give me 6 tickets sorted by creation date where status is new', 'Give me 6 tickets with basic fields and detailed request info filtered by high priority']
-                For query 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Score >=136 (understandable +30, service +30, sort +10, filtering +10, specific filter +10, one table +50 =140), Question: '', Main suggestion: 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Suggestions: ['Give me top 6 contacts from freshdesk_contacts where active is true', 'Give me 5 tickets from Freshdesk with priority and status fields sorted by due date']
-                For query 'Give me 5 contacts with basic fields and sort by creation date from apollo', Score >=136 (understandable +30, service +30, sort +10, basic fields +10, one table +50 =130), Question: '', Main suggestion: 'Give me 5 contacts with basic fields and sort by creation date from apollo', Suggestions: ['Give me 5 contacts with name and email fields sorted by name from apollo', 'Give me 5 contacts from apollo where active is true sorted by creation date']
-                For nonsensical 'dfgjdfgklfd': Score=0, Question: 'Your query is unclear or no matching data was found. Could you please clarify your request?', Main suggestion: '', Suggestions: []
-
+                For query 'Give me my tickets', Score <136, Question: 'Any specific sorting or additional filters for your tickets?', Main suggestion: 'Give me my tickets from Freshdesk for {userName ?? "unknown"}', Suggestions: ['Give me my tickets from Freshdesk sorted by creation date where status is open', 'Give me my tickets with priority, status, and sla fields where status is open']
+                For query 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Score >=136 (comprehensible +30, service +30, sort +10, filtering +10, specific filter +10, one table +50 =140), Question: '', Main suggestion: 'Give me 5 tickets from Freshdesk sorted by creation date where status is open', Suggestions: ['Give me top 6 contacts from freshdesk_contacts where active is true', 'Give me 5 tickets from Freshdesk with priority and status fields sorted by due date']
+                For query 'Give me 5 contacts with basic fields and sort by creation date from apollo', Score >=136 (comprehensible +30, service +30, sort +10, basic fields +10, one table +50 =130), Question: '', Main suggestion: 'Give me 5 contacts with basic fields and sort by creation date from apollo', Suggestions: ['Give me 5 contacts with name and email fields sorted by name from apollo', 'Give me 5 contacts from apollo where active is true sorted by creation date']
+                For nonsensical 'dfgjdfgklfd': Score=0, Question: 'Your query appears unclear or no matching data was found. Could you please provide more details about your request?', Main suggestion: '', Suggestions: []
                 Output format:
-                {{{{""question"": ""question text"", ""main_suggestion"": ""main suggest text"", ""suggestions"": [""suggest1"", ""suggest2""]}}}}
+                {{{{'question': 'question text', 'main_suggestion': 'main suggest text', 'suggestions': ['suggest1', 'suggest2']}}}}
             ";
 
             var messages = new[] { new UserChatMessage(prompt) };

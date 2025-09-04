@@ -1,8 +1,16 @@
 import { classNamesFunction } from '@fluentui/react';
 import type { IInfoPanelStyleProps, IInfoPanelStyles } from './InfoPanel.types';
+import { animateSyncStyles } from '../../../api/constants/animateSyncStyles';
 
 export const getStyles = (props: IInfoPanelStyleProps): IInfoPanelStyles => {
   const { theme } = props;
+
+  if (typeof document !== 'undefined' && !document.getElementById('info-panel-spin')) {
+    const style = document.createElement('style');
+    style.id = 'info-panel-spin';
+    style.textContent = animateSyncStyles;
+    document.head.appendChild(style);
+  }
 
   return {
     root: {
@@ -20,7 +28,7 @@ export const getStyles = (props: IInfoPanelStyleProps): IInfoPanelStyles => {
       backgroundColor: 'transparent',
     },
     panelContent: {
-      padding: '6px 16px', 
+      padding: '6px 16px',
       color: theme?.palette.neutralPrimary || '#323130',
     },
     servicesGrid: {
@@ -32,6 +40,7 @@ export const getStyles = (props: IInfoPanelStyleProps): IInfoPanelStyles => {
       flexWrap: 'wrap',
     },
     serviceCard: {
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       padding: '6px 10px',
@@ -98,6 +107,33 @@ export const getStyles = (props: IInfoPanelStyleProps): IInfoPanelStyles => {
       lineHeight: '1.1',
       fontWeight: '400',
     },
+    syncButton: {
+      backgroundColor: 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+      color: theme?.palette.neutralSecondary || '#605e5c',
+      ':hover': {
+        backgroundColor: 'transparent',
+        color: theme?.palette.themePrimary || '#6264a7',
+        transform: 'scale(1.05)',
+      },
+      ':disabled': {
+        cursor: 'not-allowed',
+        opacity: 0.6,
+        ':hover': {
+          backgroundColor: 'transparent',
+          color: theme?.palette.neutralSecondary || '#605e5c',
+          transform: 'none',
+        }
+      }
+    },
+    syncButtonIcon: {
+      display: 'inline-block',
+      transformOrigin: '50% 50%',
+    },
+    spinning: {
+      animation: 'spin 4s linear infinite',
+    }
   };
 };
 

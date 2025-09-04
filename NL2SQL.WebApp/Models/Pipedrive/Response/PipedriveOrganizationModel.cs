@@ -16,6 +16,18 @@ namespace NL2SQL.WebApp.Models.Pipedrive.Response
         [JsonPropertyName("visible_to")]
         public string? VisibleTo { get; set; }
 
+        [JsonPropertyName("people_count")]
+        public int? PeopleCount { get; set; }
+
+        [JsonPropertyName("won_deals_count")]
+        public int? WonDealsCount { get; set; }
+
+        [JsonPropertyName("lost_deals_count")]
+        public int? LostDealsCount { get; set; }
+
+        [JsonPropertyName("owner_name")]
+        public string? OwnerName { get; set; }
+
         [JsonPropertyName("add_time")]
         public DateTime? AddTime { get; set; }
 

@@ -34,6 +34,15 @@ namespace NL2SQL.WebApp.Models.Pipedrive.Response
         [JsonPropertyName("close_time")]
         public DateTime? CloseTime { get; set; }
 
+        [JsonPropertyName("active")]
+        public bool Active { get; set; }
+
+        [JsonPropertyName("formatted_weighted_value")]
+        public string? FormattedWeightedValue { get; set; }
+
+        [JsonPropertyName("products_count")]
+        public int? ProductsCount { get; set; }
+
         [JsonPropertyName("pipeline_id")]
         public int? PipelineId { get; set; }
 

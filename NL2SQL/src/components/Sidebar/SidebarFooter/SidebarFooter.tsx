@@ -40,11 +40,6 @@ const SidebarFooterBase: React.FunctionComponent<ISidebarFooterProps> = ({ theme
       iconProps: { iconName: 'ComplianceAudit' },
     },
     {
-      key: 'contactus',
-      text: strings.UserOptions.contact,
-      iconProps: { iconName: 'ChatInviteFriend' },
-    },
-    {
       key: 'logout',
       text: strings.UserOptions.logout,
       iconProps: { iconName: 'SignOut' },
