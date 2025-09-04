@@ -23,6 +23,14 @@ export const getStyles = (props: IChatUsersTooltipStyleProps): IChatUsersTooltip
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+    headerLeft: {
+      flex: 1,
+    },
+    backIcon: {
+      cursor: 'pointer',
+      marginRight: '8px',
+      fontSize: '14px',
+    },
     searchBox: {
       marginBottom: '8px',
     },
@@ -50,6 +58,9 @@ export const getStyles = (props: IChatUsersTooltipStyleProps): IChatUsersTooltip
     },
     userItemSelected: {
       backgroundColor: theme.palette.themeLight,
+    },
+    selectableUserItem: {
+      cursor: 'pointer',
     },
     userAvatar: {
       width: '32px',
