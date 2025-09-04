@@ -12,6 +12,14 @@ public class SqlTrainingDataRepository : Repository<SqlTrainingDataEntity>, ISql
         
     }
 
+    public Task<SqlTrainingDataEntity?> GetByQuestionNameAsync(string questionName)
+    {
+        var result = _context.TrainingData
+            .FirstOrDefaultAsync(c => c.NaturalLanguageQuery == questionName);
+
+        return result;
+    }
+
     public async Task<SqlTrainingDataEntity?> GetBySqlNameAsync(string sql)
     {
         var result = await _context.TrainingData

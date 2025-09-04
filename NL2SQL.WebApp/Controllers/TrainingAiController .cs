@@ -31,5 +31,16 @@ namespace NL2SQL.WebApp.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost("delete")]
+        public async Task<IActionResult> DeleteTrainingData([FromBody] RemoveSqlTrainingDataDto requestDto)
+        {
+            var result = await _sqlTrainingDataService.DeleteTrainingDataAsync(_mapper.Map<RemoveSqlTrainingDataModel>(requestDto));
+
+            if (!result)
+                return NotFound("The training data to delete was not found.");
+
+            return Ok(result);
+        }
     }
 }

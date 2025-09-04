@@ -8,17 +8,24 @@ namespace NL2SQL.WebApp.Services;
 public class SqlTrainingDataService : ISqlTrainingDataService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IVannaService _vannaService;
 
-    public SqlTrainingDataService(IUnitOfWork unitOfWork)
+    public SqlTrainingDataService(IUnitOfWork unitOfWork, IVannaService vannaService)
     {
-        _unitOfWork = unitOfWork;
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _vannaService = vannaService ?? throw new ArgumentNullException(nameof(vannaService));
     }
     
     public async Task<bool> AddTrainingDataAsync(AddSqlTrainingDataModel model)
     {
-        var existedTrainingData = await _unitOfWork.SqlTrainingData.GetBySqlNameAsync(model.GeneratedSql);
+        var existedTrainingDataByQuestion = await _unitOfWork.SqlTrainingData.GetByQuestionNameAsync(model.NaturalLanguageQuery);
 
-        if (existedTrainingData != null)
+        if (existedTrainingDataByQuestion != null)
+            return true;
+
+        var existedTrainingDataBySql = await _unitOfWork.SqlTrainingData.GetBySqlNameAsync(model.GeneratedSql);
+
+        if (existedTrainingDataBySql != null)
             return true;
 
         var addSqlTrainingDara = new SqlTrainingDataEntity()
@@ -30,7 +37,22 @@ public class SqlTrainingDataService : ISqlTrainingDataService
         
         await _unitOfWork.SqlTrainingData.AddAsync(addSqlTrainingDara);
         await _unitOfWork.CompleteAsync();
-        
+        _vannaService.ReinitializeModels();
+
+        return true;
+    }
+
+    public async Task<bool> DeleteTrainingDataAsync(RemoveSqlTrainingDataModel modelToRemove)
+    {
+        var existedTrainingDataByQuestion = await _unitOfWork.SqlTrainingData.GetByQuestionNameAsync(modelToRemove.NaturalLanguageQuery);
+
+        if (existedTrainingDataByQuestion == null || existedTrainingDataByQuestion.GeneratedSql != modelToRemove.GeneratedSql)
+            return true;
+
+        await _unitOfWork.SqlTrainingData.DeleteAsync(existedTrainingDataByQuestion);
+        await _unitOfWork.CompleteAsync();
+        _vannaService.ReinitializeModels();
+
         return true;
     }
 }
