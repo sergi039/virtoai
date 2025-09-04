@@ -7,6 +7,7 @@ const strings: IVirtoStrings = {
     footerTitle: 'My Profile',
     syncSuccess: 'Success',
     syncError: 'Error',
+    addProcess: 'Adding...',
     loading: 'Loading...',
 
     InfoPanel: {
@@ -16,7 +17,9 @@ const strings: IVirtoStrings = {
         records: 'records',
         recordsShort: 'records',
         recordsK: 'K records',
-        recordsM: 'M records'
+        recordsM: 'M records',
+        syncSuccess: 'Data synchronized successfully!',
+        syncError: 'Failed to synchronize data. Please try again.'
     },
 
     Chat: {
@@ -25,7 +28,7 @@ const strings: IVirtoStrings = {
         history: 'Chat history',
         shown: 'Shown',
         from: 'from',
-        notAvailable: 'N/A',
+        notAvailable: '—',
         feedbackSaveSuccess: 'Feedback saved successfully!',
         feedbackSaveFailed: 'Failed to save feedback!',
         sqlSavedSuccess: 'SQL saved successfully for training!',
@@ -82,6 +85,7 @@ const strings: IVirtoStrings = {
             noUsersFound: 'No users found',
             noUsersAvailable: 'No users available',
             selectedUsers: 'Selected:',
+            ownerName: 'Owner',
             chatHistoryManageUsers: 'Manage users in this chat',
             chatHistoryManageUsersTooltip: 'Manage users in this chat',
             chatHistoryManageUsersTooltipSave: 'Save changes to user permissions',

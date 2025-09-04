@@ -135,8 +135,44 @@ namespace NL2SQL.WebApp.Services
             return agents;
         }
 
+        public async Task<Dictionary<int, string>> GetTicketFieldOptionsAsync(string fieldName)
+        {
+            var allFields = await MakeRequestAsync<List<TicketFieldResponse>>("admin/ticket_fields");
+
+            var statusField = allFields.FirstOrDefault(f => f.Name == fieldName || f.Type == fieldName);
+            if (statusField == null)
+                throw new Exception($"Field {fieldName} not found in Freshdesk");
+
+            var statusDetails = await MakeRequestAsync<TicketFieldResponse>($"admin/ticket_fields/{statusField.Id}");
+
+            var result = new Dictionary<int, string>();
+            foreach (var kvp in statusDetails.Choices)
+            {
+                if (!int.TryParse(kvp.Key, out var code)) continue;
+
+                if (kvp.Value is JsonElement jsonElem)
+                {
+                    if (jsonElem.ValueKind == JsonValueKind.Array)
+                    {
+                        result[code] = jsonElem[0].GetString() ?? "";
+                    }
+                    else if (jsonElem.ValueKind == JsonValueKind.String)
+                    {
+                        result[code] = jsonElem.GetString() ?? "";
+                    }
+                }
+                else
+                {
+                    result[code] = kvp.Value.ToString() ?? "";
+                }
+            }
+
+            return result;
+        }
+
         public async Task<List<ContactModel>> GetContactsAsync(bool verifySsl, int limit, int page = 1)
         {
+            await GetTicketFieldOptionsAsync("source");
             var allContacts = new List<ContactModel>();
             const int perPage = 100;
             var totalPages = (int)Math.Ceiling((double)limit / perPage);

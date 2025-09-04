@@ -5,9 +5,12 @@
         public static string MapStatus(int status) => status switch
         {
             2 => "Open",
+            6 => "Waiting on Customer",
             3 => "Pending",
+            8 => "No Client Reply",
             4 => "Resolved",
             5 => "Closed",
+            9 => "Backlogged",
             _ => $"Unknown ({status})"
         };
 
