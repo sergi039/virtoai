@@ -11,6 +11,6 @@ namespace NL2SQL.WebApp.Services.Interfaces
 
         Task<bool> CheckUserQueryInRagSystemAsync(string query); 
 
-        Task<GenerateClarifyingModel> GenerateClarifyingAsync(string userQuery, int chatId);
+        Task<GenerateClarifyingModel> GenerateClarifyingAsync(string userQuery, int chatId, string? userName, string? userEmail);
     }
 }

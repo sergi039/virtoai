@@ -7,6 +7,7 @@ using NL2SQL.WebApp.Dtos.Message.Response;
 using NL2SQL.WebApp.Models.AiGenerate.Request;
 using NL2SQL.WebApp.Services.Interfaces;
 using NL2SQL.WebApp.Utils;
+using System.Security.Claims;
 
 namespace NL2SQL.WebApp.Controllers
 {
@@ -68,10 +69,13 @@ namespace NL2SQL.WebApp.Controllers
         {
             try
             {
+                var userName = User.FindFirst("name")?.Value;
+                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
                 if (string.IsNullOrEmpty(requestDto.Query))
                     return BadRequest(new { error = "Query is required" });
 
-                var result = await _openAiApiService.GenerateClarifyingAsync(requestDto.Query, requestDto.ChatId);
+                var result = await _openAiApiService.GenerateClarifyingAsync(requestDto.Query, requestDto.ChatId, userName, userEmail);
 
                 return Ok(_mapper.Map<GenerateClarifyingDto>(result));
             }
