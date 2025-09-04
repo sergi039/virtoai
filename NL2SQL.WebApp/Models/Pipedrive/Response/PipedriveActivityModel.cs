@@ -13,6 +13,9 @@ namespace NL2SQL.WebApp.Models.Pipedrive.Response
         [JsonPropertyName("subject")]
         public string Subject { get; set; }
 
+        [JsonPropertyName("location")]
+        public string Location { get; set; }
+
         [JsonPropertyName("note")]
         public string Note { get; set; }
 
@@ -33,6 +36,9 @@ namespace NL2SQL.WebApp.Models.Pipedrive.Response
 
         [JsonPropertyName("deal_id")]
         public int? DealId { get; set; }
+
+        [JsonPropertyName("done")]
+        public bool Done { get; set; }
 
         [JsonPropertyName("add_time")]
         public DateTime? AddTime { get; set; }

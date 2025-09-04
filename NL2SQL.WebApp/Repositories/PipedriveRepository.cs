@@ -172,6 +172,8 @@ namespace NL2SQL.WebApp.Repositories
                 DealId = activity.DealId,
                 AddTime = activity.AddTime != null ? DateHelper.ConvertToUtc(activity.AddTime ?? DateTime.UtcNow) : null,
                 UpdateTime = activity.UpdateTime != null ? DateHelper.ConvertToUtc(activity.UpdateTime ?? DateTime.UtcNow) : null,
+                Done = activity.Done,
+                Location = activity.Location,
                 Data = JsonSerializer.Serialize(activity)
             };
         }
@@ -208,6 +210,9 @@ namespace NL2SQL.WebApp.Repositories
                 CloseTime = deal.CloseTime != null ? DateHelper.ConvertToUtc(deal.CloseTime ?? DateTime.UtcNow) : null,
                 PipelineId = deal.PipelineId,
                 StageId = deal.StageId,
+                Active = deal.Active,
+                FormattedWeightedValue = deal.FormattedWeightedValue,
+                ProductsCount = deal.ProductsCount,
                 Data = JsonSerializer.Serialize(deal)
             };
         }
@@ -222,6 +227,10 @@ namespace NL2SQL.WebApp.Repositories
                 VisibleTo = org.VisibleTo,
                 AddTime = org.AddTime != null ? DateHelper.ConvertToUtc(org.AddTime ?? DateTime.UtcNow) : null,
                 UpdateTime = org.UpdateTime != null ? DateHelper.ConvertToUtc(org.UpdateTime ?? DateTime.UtcNow) : null,
+                PeopleCount = org.PeopleCount,
+                WonDealsCount = org.WonDealsCount,
+                LostDealsCount = org.LostDealsCount,
+                OwnerName = org.OwnerName,
                 Data = JsonSerializer.Serialize(org)
             };
         }

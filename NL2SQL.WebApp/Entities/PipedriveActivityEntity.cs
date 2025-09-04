@@ -11,6 +11,9 @@ namespace NL2SQL.WebApp.Entities
         [Column("activity_id")]
         public int ActivityId { get; set; }
 
+        [Column("location")]
+        public string Location { get; set; }
+
         [Column("type")]
         public string Type { get; set; }
 
@@ -28,6 +31,9 @@ namespace NL2SQL.WebApp.Entities
 
         [Column("duration")]
         public string Duration { get; set; }
+
+        [Column("done")]
+        public bool Done { get; set; }
 
         [Column("org_id")]
         public int? OrgId { get; set; }

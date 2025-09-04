@@ -3,7 +3,6 @@ using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Models.Database.Response;
 using NL2SQL.WebApp.Models.Message.Response;
 using NL2SQL.WebApp.Repositories.Interfaces;
-using NL2SQL.WebApp.Services.Interfaces;
 using NL2SQL.WebApp.Utils;
 using Npgsql;
 using System.Data;

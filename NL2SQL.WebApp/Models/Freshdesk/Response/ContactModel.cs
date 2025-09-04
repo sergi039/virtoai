@@ -10,6 +10,9 @@ namespace NL2SQL.WebApp.Models.Freshdesk.Response
         [JsonPropertyName("name")]
         public string? Name { get; set; }
 
+        [JsonPropertyName("active")]
+        public bool Active { get; set; }
+
         [JsonPropertyName("email")]
         public string? Email { get; set; }
 

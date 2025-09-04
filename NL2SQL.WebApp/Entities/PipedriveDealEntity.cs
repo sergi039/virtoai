@@ -26,6 +26,15 @@ namespace NL2SQL.WebApp.Entities
         [Column("value")]
         public decimal? Value { get; set; }
 
+        [Column("active")]
+        public bool Active { get; set; }
+
+        [Column("formatted_weighted_value")]
+        public string? FormattedWeightedValue { get; set; }
+
+        [Column("products_count")]
+        public int? ProductsCount { get; set; }
+
         [Column("currency")]
         public string Currency { get; set; }
 
