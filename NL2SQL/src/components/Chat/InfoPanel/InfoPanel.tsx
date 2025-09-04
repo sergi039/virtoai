@@ -1,16 +1,28 @@
-import { styled, Stack, Text, Spinner } from '@fluentui/react';
+import { styled, Stack, Text, Spinner, IconButton } from '@fluentui/react';
 import type { IInfoPanelProps, IInfoPanelStyleProps, IInfoPanelStyles } from './InfoPanel.types';
 import { getStyles, getClassNames } from './InfoPanel.styles';
 import { useNL2SQLStore } from '../../../stores/useNL2SQLStore';
 import strings from '../../../Ioc/en-us';
 import { ServiceIcons } from '../../../api/constants/serviceIcons';
 import { useEffect, useState } from 'react';
+import { convertSettingsToState, convertStateToSettings } from '../../../utils/configMappings';
+import toast from 'react-hot-toast';
 
 const InfoPanelBase: React.FunctionComponent<IInfoPanelProps> = ({ children, theme: customTheme }) => {
-  const { currentTheme, settings, getAllSettings } = useNL2SQLStore();
+  const { 
+    currentTheme, 
+    settings, 
+    getAllSettings,
+    syncApolloSettings,
+    syncOrttoSettings,
+    syncFreshdeskSettings,
+    syncPipedriveSettings,
+    refreshSettings
+  } = useNL2SQLStore();
   const styleProps: IInfoPanelStyleProps = { theme: customTheme || currentTheme };
   const classNames = getClassNames(getStyles, styleProps);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [syncingServices, setSyncingServices] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,6 +36,61 @@ const InfoPanelBase: React.FunctionComponent<IInfoPanelProps> = ({ children, the
       fetchData();
     }
   }, [settings]);
+
+  const handleSyncService = async (serviceKey: string) => {
+    const serviceId = serviceKey.toLowerCase().replace('setting', '');
+    
+    setSyncingServices(prev => new Set(prev).add(serviceId));
+    
+    try {
+      if (!settings) return;
+      
+      const services = convertSettingsToState(settings);
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
+
+      const settingsToSync = convertStateToSettings([service]);
+      let success = false;
+
+      switch (serviceId) {
+        case 'apollo':
+          if (settingsToSync.apolloSetting) {
+            success = await syncApolloSettings(settingsToSync.apolloSetting);
+          }
+          break;
+        case 'ortto':
+          if (settingsToSync.orttoSetting) {
+            success = await syncOrttoSettings(settingsToSync.orttoSetting);
+          }
+          break;
+        case 'freshdesk':
+          if (settingsToSync.freshdeskSetting) {
+            success = await syncFreshdeskSettings(settingsToSync.freshdeskSetting);
+          }
+          break;
+        case 'pipedrive':
+          if (settingsToSync.pipedriveSetting) {
+            success = await syncPipedriveSettings(settingsToSync.pipedriveSetting);
+          }
+          break;
+      }
+
+      if (success) {
+        await refreshSettings();
+        toast.success(strings.InfoPanel.syncSuccess);
+      } else {
+        toast.error(strings.InfoPanel.syncError);
+      }
+    } catch (error) {
+      toast.error(strings.InfoPanel.syncError);
+    } finally {
+      setSyncingServices(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(serviceId);
+        return newSet;
+      });
+    }
+  };
 
   const formatDateToLocalTime = (utcDate: Date | string | null | undefined): string => {
     if (!utcDate) return strings.InfoPanel.noSyncData;
@@ -111,28 +178,43 @@ const InfoPanelBase: React.FunctionComponent<IInfoPanelProps> = ({ children, the
                 <Spinner label={strings.InfoPanel.loading} />
               ) : (
                 <div className={classNames.servicesGrid}>
-                  {activeServices.map(([key, value]) => (
-                    <div key={key} className={classNames.serviceCard}>
-                      <div className={classNames.serviceIcon}>
-                        {getServiceIcon(value.name, key)}
-                      </div>
-                      <div className={classNames.serviceInfo}>
-                        <Text className={classNames.serviceName}>
-                          {value.name} ({formatTotalRecordCount(value.countRecords)})
-                        </Text>
-                        <div className={classNames.serviceDetails}>
-                          <Text className={classNames.syncTime}>
-                            {formatDateToLocalTime(value.lastSyncTime)}
+                  {activeServices.map(([key, value]) => {
+                    const serviceId = key.toLowerCase().replace('setting', '');
+                    const isSyncing = syncingServices.has(serviceId);
+                    
+                    return (
+                      <div key={key} className={classNames.serviceCard}>
+                        <div className={classNames.serviceIcon}>
+                          {getServiceIcon(value.name, key)}
+                        </div>
+                        <div className={classNames.serviceInfo}>
+                          <Text className={classNames.serviceName}>
+                            {value.name} ({formatTotalRecordCount(value.countRecords)})
                           </Text>
-                          <div className={classNames.recordCounts}>
-                            <Text className={classNames.recordCount}>
-                              {formatRecordCount(value.lastSyncCount)}
+                          <div className={classNames.serviceDetails}>
+                            <Text className={classNames.syncTime}>
+                              {formatDateToLocalTime(value.lastSyncTime)}
                             </Text>
+                            <div className={classNames.recordCounts}>
+                              <Text className={classNames.recordCount}>
+                                {formatRecordCount(value.lastSyncCount)}
+                              </Text>
+                            </div>
                           </div>
                         </div>
+                        <IconButton
+                          className={classNames.syncButton}
+                          iconProps={{
+                            iconName: isSyncing ? 'Sync' : 'Refresh',
+                            className: `${classNames.syncButtonIcon} ${isSyncing ? classNames.spinning : ''}`
+                          }}
+                          title={isSyncing ? 'Syncing...' : 'Sync data'}
+                          disabled={isSyncing}
+                          onClick={() => handleSyncService(key)}
+                        />
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Stack>

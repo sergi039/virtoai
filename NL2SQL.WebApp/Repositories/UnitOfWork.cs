@@ -3,7 +3,6 @@ using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Models.Database.Response;
 using NL2SQL.WebApp.Models.Message.Response;
 using NL2SQL.WebApp.Repositories.Interfaces;
-using NL2SQL.WebApp.Services.Interfaces;
 using NL2SQL.WebApp.Utils;
 using Npgsql;
 using System.Data;
@@ -14,7 +13,6 @@ namespace NL2SQL.WebApp.Repositories
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
-        private readonly IApolloApiService _apiApolloService;
         private IChatRepository _chats;
         private IMessageRepository _messages;
         private IOrttoRepository _orttoRepository;
@@ -35,10 +33,9 @@ namespace NL2SQL.WebApp.Repositories
         private bool _disposed = false;
         private const string DefaultNameNullRow = "Value is null";
 
-        public UnitOfWork(AppDbContext context, IApolloApiService apiApolloService)
+        public UnitOfWork(AppDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _apiApolloService = apiApolloService ?? throw new ArgumentNullException(nameof(apiApolloService));
         }
 
         public IChatRepository Chats
@@ -63,7 +60,7 @@ namespace NL2SQL.WebApp.Repositories
 
         public IApolloRepository Apollo
         {
-            get { return _apolloRepository ??= new ApolloRepository(_context, _apiApolloService); }
+            get { return _apolloRepository ??= new ApolloRepository(_context); }
         }
 
         public IPipedriveRepository Pipedrive

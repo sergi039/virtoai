@@ -59,4 +59,7 @@ export interface IMessageStyles {
   suggestionsTextList: IStyle;
   suggestionTextItem: IStyle;
   suggestionTextItemClickable: IStyle;
+  aiSystemResponse: IStyle;
+  aiImproveSection: IStyle;
+  aiQuestionItem: IStyle;
 }

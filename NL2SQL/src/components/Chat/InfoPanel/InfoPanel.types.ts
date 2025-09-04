@@ -23,4 +23,7 @@ export interface IInfoPanelStyles {
   icon: IStyle;
   recordCounts: IStyle;
   totalRecordCount: IStyle;
+  syncButton: IStyle;
+  syncButtonIcon: IStyle;
+  spinning: IStyle;
 }

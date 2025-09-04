@@ -42,6 +42,7 @@ export const CreateRelationTab: React.FC<ICreateRelationTabProps> = ({
     onUpdateAction,
     onDeleteAction,
     isFormValid,
+    isRequiredJoin,
     onSourceServiceChange,
     onSourceTableChange,
     onSourceColumnChange,
@@ -52,6 +53,7 @@ export const CreateRelationTab: React.FC<ICreateRelationTabProps> = ({
     onJoinTypeChange,
     onUpdateActionChange,
     onDeleteActionChange,
+    onRequiredJoinChange,
     onCreateExplicitRelation,
     onCreateImplicitRelation,
     onCancel,
@@ -163,6 +165,15 @@ export const CreateRelationTab: React.FC<ICreateRelationTabProps> = ({
                     onText={strings.SettingsPanel.relations.implicitRelation}
                     offText={strings.SettingsPanel.relations.explicitRelation}
                     onChange={(_, checked) => setIsImplicitRelation(!!checked)}
+                />
+
+                <Toggle
+                    label={strings.SettingsPanel.relations.requiredJoinToggle}
+                    inlineLabel
+                    checked={isRequiredJoin}
+                    onText={strings.SettingsPanel.relations.requiredJoin}
+                    offText={strings.SettingsPanel.relations.optionalJoin}
+                    onChange={(_, checked) => onRequiredJoinChange(!!checked)}
                 />
 
                 <Stack className={classNames.formGrid}>

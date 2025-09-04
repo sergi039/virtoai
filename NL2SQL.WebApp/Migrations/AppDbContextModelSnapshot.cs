@@ -31,6 +31,10 @@ namespace NL2SQL.WebApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("City")
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
                     b.Property<string>("ContactId")
                         .IsRequired()
                         .HasColumnType("text")
@@ -39,10 +43,6 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("text")
                         .HasColumnName("country");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
 
                     b.Property<string>("Data")
                         .IsRequired()
@@ -53,9 +53,18 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("text")
                         .HasColumnName("email");
 
+                    b.Property<string>("EmailStatus")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email_status");
+
                     b.Property<string>("FirstName")
                         .HasColumnType("text")
                         .HasColumnName("first_name");
+
+                    b.Property<string>("Headline")
+                        .HasColumnType("text")
+                        .HasColumnName("headline");
 
                     b.Property<string>("LastName")
                         .HasColumnType("text")
@@ -73,21 +82,13 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("text")
                         .HasColumnName("organization_id");
 
-                    b.Property<string>("OrganizationName")
+                    b.Property<string>("PhotoUrl")
                         .HasColumnType("text")
-                        .HasColumnName("organization_name");
-
-                    b.Property<string>("Phone")
-                        .HasColumnType("text")
-                        .HasColumnName("phone");
+                        .HasColumnName("photo_url");
 
                     b.Property<string>("Title")
                         .HasColumnType("text")
                         .HasColumnName("title");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
@@ -142,18 +143,22 @@ namespace NL2SQL.WebApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("City")
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
                     b.Property<string>("Country")
                         .HasColumnType("text")
                         .HasColumnName("country");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
 
                     b.Property<string>("Data")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("short_description");
 
                     b.Property<string>("Industry")
                         .HasColumnType("text")
@@ -162,6 +167,10 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<string>("LinkedInUrl")
                         .HasColumnType("text")
                         .HasColumnName("linkedin_url");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("logo_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -172,14 +181,6 @@ namespace NL2SQL.WebApp.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("organization_id");
-
-                    b.Property<string>("Size")
-                        .HasColumnType("text")
-                        .HasColumnName("size");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
 
                     b.Property<string>("WebsiteUrl")
                         .HasColumnType("text")
@@ -764,10 +765,6 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
-                    b.Property<string>("OrganizationId")
-                        .HasColumnType("text")
-                        .HasColumnName("organization_id");
-
                     b.Property<string>("OrttoId")
                         .HasColumnType("text")
                         .HasColumnName("ortto_id");
@@ -868,14 +865,6 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("date_created");
-
-                    b.Property<DateTime?>("DateUpdated")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("date_updated");
-
                     b.Property<string>("Email")
                         .HasColumnType("text")
                         .HasColumnName("email");
@@ -891,10 +880,6 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<string>("OrttoId")
                         .HasColumnType("text")
                         .HasColumnName("ortto_id");
-
-                    b.Property<string>("SubscriptionStatus")
-                        .HasColumnType("text")
-                        .HasColumnName("subscription_status");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1038,6 +1023,10 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("deal_id");
 
+                    b.Property<bool>("Done")
+                        .HasColumnType("boolean")
+                        .HasColumnName("done");
+
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("due_date");
@@ -1050,6 +1039,11 @@ namespace NL2SQL.WebApp.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("duration");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("location");
 
                     b.Property<string>("Note")
                         .HasColumnType("text")
@@ -1145,6 +1139,10 @@ namespace NL2SQL.WebApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
                     b.Property<DateTime?>("AddTime")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("add_time");
@@ -1167,6 +1165,10 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("deal_id");
 
+                    b.Property<string>("FormattedWeightedValue")
+                        .HasColumnType("text")
+                        .HasColumnName("formatted_weighted_value");
+
                     b.Property<int?>("OrgId")
                         .HasColumnType("integer")
                         .HasColumnName("org_id");
@@ -1178,6 +1180,10 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<int?>("PipelineId")
                         .HasColumnType("integer")
                         .HasColumnName("pipeline_id");
+
+                    b.Property<int?>("ProductsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("products_count");
 
                     b.Property<int?>("StageId")
                         .HasColumnType("integer")
@@ -1266,6 +1272,10 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
+                    b.Property<int?>("LostDealsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("lost_deals_count");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1275,6 +1285,14 @@ namespace NL2SQL.WebApp.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("organization_id");
 
+                    b.Property<string>("OwnerName")
+                        .HasColumnType("text")
+                        .HasColumnName("owner_name");
+
+                    b.Property<int?>("PeopleCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("people_count");
+
                     b.Property<DateTime?>("UpdateTime")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("update_time");
@@ -1282,6 +1300,10 @@ namespace NL2SQL.WebApp.Migrations
                     b.Property<string>("VisibleTo")
                         .HasColumnType("text")
                         .HasColumnName("visible_to");
+
+                    b.Property<int?>("WonDealsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("won_deals_count");
 
                     b.HasKey("Id");
 

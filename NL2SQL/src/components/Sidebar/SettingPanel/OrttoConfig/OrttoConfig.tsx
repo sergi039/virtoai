@@ -5,7 +5,7 @@ import strings from '../../../../Ioc/en-us';
 import { SyncTimeInput } from '../SyncTimeInput';
 import { ToggleRow } from '../ToggleRow';
 import { SyncButton } from '../SyncButton';
-import SecretsSettingsForm from '../../../SecretsSettingsForm';
+import { SecretsSettingsForm } from '../SecretsSettingsForm';
 
 const OrttoConfigBase: React.FC<IOrttoConfigProps> = ({
   service,

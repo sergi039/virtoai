@@ -10,32 +10,34 @@ namespace NL2SQL.WebApp.Services
         private readonly HttpClient _httpClient;
         private readonly SecretsManager _secretsManager;
 
-
         public PipedriveApiService(HttpClient httpClient, SecretsManager secretsManager)
         {
             _httpClient = httpClient;
             _secretsManager = secretsManager;
         }
 
-        private async Task<List<T>> FetchAllItemsAsync<T>(string endpoint, string since = null, int chunkSize = 20)
+        private async Task<List<T>> FetchAllItemsAsync<T>(string endpoint, string since = null, int totalLimit = 100, int chunkSize = 50)
         {
             var items = new List<T>();
-            int start = 0;
+            var start = 0;
+            var remainingLimit = totalLimit;
+            var effectiveChunkSize = Math.Min(chunkSize, totalLimit);
 
             var (apiKey, apiUrl) = _secretsManager.GetSecret("pipedrive");
 
             var parameters = new Dictionary<string, string>
             {
                 { "api_token", apiKey },
-                { "limit", chunkSize.ToString() }
+                { "sort", "add_time DESC" }
             };
 
             if (!string.IsNullOrEmpty(since))
                 parameters["since_timestamp"] = since;
 
-            while (true)
+            while (remainingLimit > 0)
             {
                 parameters["start"] = start.ToString();
+                parameters["limit"] = Math.Min(effectiveChunkSize, remainingLimit).ToString();
                 var queryString = string.Join("&", parameters.Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value)}"));
                 var url = $"{apiUrl.TrimEnd('/')}/{endpoint}?{queryString}";
 
@@ -69,17 +71,16 @@ namespace NL2SQL.WebApp.Services
                         break;
 
                     items.AddRange(batch);
+                    remainingLimit -= batch.Count;
 
-                    //bool moreItems = data.AdditionalData?.Pagination?.MoreItemsInCollection ?? false;
-                    //if (!moreItems)
-                    //    break;
+                    var moreItems = data.AdditionalData?.Pagination?.MoreItemsInCollection ?? false;
+                    if (!moreItems)
+                        break;
 
-                    //start += chunkSize;
-                    //await Task.Delay(500);
-
-                    break;
+                    start += batch.Count;
+                    await Task.Delay(500);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     break;
                 }
@@ -89,15 +90,15 @@ namespace NL2SQL.WebApp.Services
         }
 
         public Task<List<PipedriveOrganizationModel>> FetchOrganizationsAsync(string since = null, int limit = 100)
-            => FetchAllItemsAsync<PipedriveOrganizationModel>("organizations", since, limit);
+            => FetchAllItemsAsync<PipedriveOrganizationModel>("organizations", since, limit, 50);
 
         public Task<List<PipedriveContactModel>> FetchContactsAsync(string since = null, int limit = 100)
-            => FetchAllItemsAsync<PipedriveContactModel>("persons", since, limit);
+            => FetchAllItemsAsync<PipedriveContactModel>("persons", since, limit, 50);
 
         public Task<List<PipedriveDealModel>> FetchDealsAsync(string since = null, int limit = 100)
-            => FetchAllItemsAsync<PipedriveDealModel>("deals", since, limit);
+            => FetchAllItemsAsync<PipedriveDealModel>("deals", since, limit, 50);
 
         public Task<List<PipedriveActivityModel>> FetchActivitiesAsync(string since = null, int limit = 100)
-            => FetchAllItemsAsync<PipedriveActivityModel>("activities", since, limit);
+            => FetchAllItemsAsync<PipedriveActivityModel>("activities", since, limit, 50);
     }
 }

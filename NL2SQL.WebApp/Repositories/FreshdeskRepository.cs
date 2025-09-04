@@ -28,45 +28,78 @@ namespace NL2SQL.WebApp.Repositories
         {
             if (!agents.Any()) return DefaultRecordsCount;
 
+            var totalAffected = 0;
+
             foreach (var agent in agents)
             {
-                var entity = MapToAgentEntity(agent);
-                await UpsertEntityAsync(_context.FreshdeskAgents, entity,
-                    e => e.AgentId == entity.AgentId,
-                    existing => UpdateAgentEntity(existing, entity));
+                try
+                {
+                    var entity = MapToAgentEntity(agent);
+                    await UpsertEntityAsync(_context.FreshdeskAgents, entity,
+                        e => e.AgentId == entity.AgentId,
+                        existing => UpdateAgentEntity(existing, entity));
+
+                    totalAffected += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            return await _context.SaveChangesAsync();
+            return totalAffected;
         }
 
         public async Task<int> ImportContactsAsync(IReadOnlyList<ContactModel> contacts)
         {
             if (!contacts.Any()) return DefaultRecordsCount;
 
+            var totalAffected = 0;
+
             foreach (var contact in contacts)
             {
-                var entity = MapToContactEntity(contact);
-                await UpsertEntityAsync(_context.FreshdeskContacts, entity,
-                    e => e.ContactId == entity.ContactId,
-                    existing => UpdateContactEntity(existing, entity));
+                try
+                {
+                    var entity = MapToContactEntity(contact);
+                    await UpsertEntityAsync(_context.FreshdeskContacts, entity,
+                        e => e.ContactId == entity.ContactId,
+                        existing => UpdateContactEntity(existing, entity));
+
+                    totalAffected += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            return await _context.SaveChangesAsync();
+            return totalAffected;
         }
 
         public async Task<int> ImportCompaniesAsync(IReadOnlyList<CompanyModel> companies)
         {
             if (!companies.Any()) return DefaultRecordsCount;
 
+            var totalAffected = 0;
+
             foreach (var company in companies)
             {
-                var entity = MapToCompanyEntity(company);
-                await UpsertEntityAsync(_context.FreshdeskCompanies, entity,
-                    e => e.CompanyId == entity.CompanyId,
-                    existing => UpdateCompanyEntity(existing, entity));
+                try
+                {
+                    var entity = MapToCompanyEntity(company);
+                    await UpsertEntityAsync(_context.FreshdeskCompanies, entity,
+                        e => e.CompanyId == entity.CompanyId,
+                        existing => UpdateCompanyEntity(existing, entity));
+
+                    totalAffected += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            return await _context.SaveChangesAsync();
+            return totalAffected;
         }
 
         public async Task<int> ImportTicketsAsync(IReadOnlyList<TicketModel> tickets, DateTime? since = null, int batchSize = 100)

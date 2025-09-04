@@ -49,7 +49,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
   const createLoadingMessage = (chatId: number): IMessage => {
     return {
-      id: -1, 
+      id: -1,
       text: null,
       previousMessageId: null,
       combinedQuery: '',
@@ -66,13 +66,13 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
   const getMessagesToDisplay = (): IMessage[] => {
     if (!currentChat) return localMessages;
-    
+
     const isLoading = isChatLoading(currentChat.id);
     if (isLoading) {
       const loadingMessage = createLoadingMessage(currentChat.id);
       return [...localMessages, loadingMessage];
     }
-    
+
     return localMessages;
   };
 
@@ -119,12 +119,12 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
       const currentState = useNL2SQLStore.getState();
       const currentMessage = currentState.currentMessages.find(msg => msg.id === aiMessageCreatedId);
       const sqlMessageToUpdate = currentMessage?.sqlMessages.find(sqlMsg => sqlMsg.model === modelConfig.name);
-      
+
       if (sqlMessageToUpdate) {
         const updatedSqlMessage: ISqlMessage = {
           ...sqlMessageToUpdate,
           sql: isError ? null : (sqlQuery?.sql || null),
-          text: isError 
+          text: isError
             ? `${strings.Chat.failedToGetResponse} ${modelConfig.name}`
             : (sqlQuery?.results ? JSON.stringify(sqlQuery.results) : strings.InfoPanel.noData),
           isLoading: false,
@@ -135,7 +135,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
         };
 
         await editSqlMessage(sqlMessageToUpdate.id, updatedSqlMessage);
-        
+
         setLocalMessages(prevMessages =>
           prevMessages.map(msg =>
             msg.id === aiMessageCreatedId ? {
@@ -152,7 +152,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
       const currentState = useNL2SQLStore.getState();
       const currentMessage = currentState.currentMessages.find(msg => msg.id === aiMessageCreatedId);
       const sqlMessageToUpdate = currentMessage?.sqlMessages.find(sqlMsg => sqlMsg.model === modelConfig.name);
-      
+
       if (sqlMessageToUpdate) {
         const errorSqlMessage: ISqlMessage = {
           ...sqlMessageToUpdate,
@@ -205,17 +205,16 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
       };
 
       const clarificationResponse = await generateClarifying(aiRequestOptions);
-      
-      if (clarificationResponse && 
-          clarificationResponse.questions.length === 1 && 
-          clarificationResponse.questions[0] === strings.Chat.unclearRequest) {
-            console.log('test');
-        
+
+      if (clarificationResponse &&
+        clarificationResponse.questions.length === 1 &&
+        clarificationResponse.questions[0] === strings.Chat.unclearRequest) {
+
         const errorMessage: IMessage = {
           id: Date.now() + 2,
           text: strings.Chat.unclearRequest,
           previousMessageId: userMessageId,
-          combinedQuery: query,
+          combinedQuery: clarificationResponse?.mainGeneratedQuery || query,
           type: 'answer',
           suggestions: '',
           followUpQuestions: '',
@@ -239,23 +238,23 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
         }
         return;
       }
-      
+
       const baseId = Date.now();
       const loadingSqlMessages = createLoadingSqlMessages(baseId);
 
       let messageType: 'answer' | 'question' = 'answer';
       let suggestions = '';
       let followUpQuestions = '';
-      let combinedQueryForMessage = query;
-      
+      let combinedQueryForMessage = clarificationResponse?.mainGeneratedQuery || query;
+
       if (clarificationResponse && (clarificationResponse.questions.length > 0 || clarificationResponse.suggests.length > 0)) {
         messageType = 'question';
         suggestions = JSON.stringify(clarificationResponse.suggests);
         followUpQuestions = JSON.stringify(clarificationResponse.questions);
       }
-      
+
       const aiMessageWithTabs = createAIMessageWithTabs(baseId, chatId, loadingSqlMessages, userMessageId, combinedQueryForMessage);
-      
+
       const updatedMessage: IMessage = {
         ...aiMessageWithTabs,
         type: messageType,
@@ -304,7 +303,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
   const handleSingleModelRequest = async (query: string, chatId: number, userMessageId: number) => {
     try {
       const modelToUse = selectedAIModels.length > 0 ? selectedAIModels[0] : null;
-      
+
       if (!modelToUse) {
         throw new Error(strings.Chat.noModelSelected);
       }
@@ -319,11 +318,11 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
       const clarificationResponse = await generateClarifying(aiRequestOptions);
 
       aiRequestOptions.query = clarificationResponse?.mainGeneratedQuery || query;
-      
-      if (clarificationResponse && 
-          clarificationResponse.questions.length === 1 && 
-          clarificationResponse.questions[0] === strings.Chat.unclearRequest) {
-        
+
+      if (clarificationResponse &&
+        clarificationResponse.questions.length === 1 &&
+        clarificationResponse.questions[0] === strings.Chat.unclearRequest) {
+
         const errorMessage: IMessage = {
           id: Date.now() + 2,
           text: strings.Chat.unclearRequest,
@@ -352,14 +351,14 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
         }
         return;
       }
-      
+
       const aiResponse = await generateAIMessage(aiRequestOptions);
 
       let messageType: 'answer' | 'question' = 'answer';
       let suggestions = '';
       let followUpQuestions = '';
       let combinedQueryForMessage = clarificationResponse?.mainGeneratedQuery || query;
-      
+
       if (clarificationResponse && (clarificationResponse.questions.length > 0 || clarificationResponse.suggests.length > 0)) {
         messageType = 'question';
         suggestions = JSON.stringify(clarificationResponse.suggests);
@@ -505,7 +504,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
         const userMessageCreated = await addMessage(userMessage);
         if (!userMessageCreated) {
-          setLocalMessages(prevMessages => 
+          setLocalMessages(prevMessages =>
             prevMessages.filter(msg => msg.id !== userMessage.id)
           );
           scrollToBottom();
@@ -529,7 +528,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
         };
 
         const isChainBroken = await isCheckBrokeChain(checkRequest);
-        
+
         let combinedQuery: string;
         let previousMessageId: number | null = null;
 
@@ -562,7 +561,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
         const userMessageCreated = await addMessage(userMessage);
         if (!userMessageCreated) {
-          setLocalMessages(prevMessages => 
+          setLocalMessages(prevMessages =>
             prevMessages.filter(msg => msg.id !== userMessage.id)
           );
           scrollToBottom();
@@ -585,7 +584,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
   const findChainStart = (startMessage: IMessage): IMessage => {
     let currentMessage = startMessage;
-    
+
     while (currentMessage.previousMessageId !== null) {
       const previousMessage = currentMessages.find(msg => msg.id === currentMessage.previousMessageId);
       if (!previousMessage) {
@@ -593,7 +592,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
       }
       currentMessage = previousMessage;
     }
-    
+
     return currentMessage;
   };
 
@@ -609,7 +608,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
         buildChain(nextMessage);
       }
     };
-    
+
     buildChain(startMessage);
     return chain;
   };
@@ -626,13 +625,13 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
     }
 
     const messageChain = getMessageChain(lastMessage);
-    
+
     const userMessages = messageChain.filter(msg => msg.isUser);
 
     const userQuestions = userMessages
       .filter(msg => msg.type === 'question')
       .map(msg => msg.text);
-    
+
     const userAnswers = userMessages
       .filter(msg => msg.type === 'answer')
       .map(msg => msg.text);
@@ -644,7 +643,7 @@ const MainLayoutBase: React.FunctionComponent<IMainLayoutProps> = ({ theme: cust
 
   const processMessage = async (combinedQuery: string, chatId: number, previousMessageId: number) => {
     setChatLoading(chatId, true);
-    
+
     try {
       if (selectedAIModels.length > 1) {
         await handleAllModelsRequest(combinedQuery, chatId, previousMessageId);

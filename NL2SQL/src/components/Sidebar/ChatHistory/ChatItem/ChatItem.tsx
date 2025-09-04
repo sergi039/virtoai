@@ -128,11 +128,11 @@ const ChatItemBase: React.FunctionComponent<IChatItemProps> = ({
         )}
       </Stack>
       
-      {canOperations && (
+      {shouldShowPeopleButton && (
         <Stack horizontal verticalAlign="center" styles={styleNames.usersIconContainer} className="chat-users-container">
           <IconButton
             id={`people-button-${chat.id}`}
-            iconProps={{ iconName: 'PeopleAdd' }}
+            iconProps={{ iconName: canOperations ? 'PeopleAdd' : 'People' }}
             styles={styleNames.usersActionButton}
             onClick={handleManageUsersClick}
           />

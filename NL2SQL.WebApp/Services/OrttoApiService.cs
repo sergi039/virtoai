@@ -38,8 +38,8 @@ namespace NL2SQL.WebApp.Services
             try
             {
                 object body = string.IsNullOrEmpty(cursor)
-                    ? new { limit, fields = new[] { "str::first", "str::last", "str::email", "str::subscription_status" } }
-                    : new { limit, cursor_id = cursor, fields = new[] { "str::first", "str::last", "str::email", "str::subscription_status" } };
+                    ? new { limit, fields = new[] { "str::first", "str::last", "str::email"} }
+                    : new { limit, cursor_id = cursor, fields = new[] { "str::first", "str::last", "str::email" } };
 
                 var response = await MakePostRequestAsync<OrttoPersonResponse>("v1/person/get", body);
                 var persons = response.Contacts;
@@ -61,8 +61,8 @@ namespace NL2SQL.WebApp.Services
                     ? new { limit, fields = new[] { "str:o:name", "int:o:employees", "str:o:industry", "str:o:website" } }
                     : new { limit, cursor_id = cursor, fields = new[] { "str:o:name", "int:o:employees", "str:o:industry", "str:o:website" } };
 
-                var response = await MakePostRequestAsync<OrttoOrganizationResponse>("v1/organizations/get", body);
-                var organizations = response.Organizations;
+                var response = await MakePostRequestAsync<OrttoOrganizationResponse>("v1/accounts/get", body);
+                var organizations = response.Accounts;
                 var nextCursor = response.CursorId;
 
                 return (organizations, nextCursor);

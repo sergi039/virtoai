@@ -6,6 +6,7 @@ import { useNL2SQLStore } from '../../../../stores/useNL2SQLStore';
 import strings from '../../../../Ioc/en-us';
 import { UrlTemplateUtils } from '../../../../utils/urlTemplateUtils';
 import { DateChatUtils } from '../../../../utils/dateChatUtils';
+import { ValueUtils } from '../../../../utils/valueUtils';
 import { IRequestGenerateFieldContext } from '../../../../api/model';
 
 const FluentContextMenu: React.FunctionComponent<IFluentContextMenuProps> = ({
@@ -25,7 +26,7 @@ const FluentContextMenu: React.FunctionComponent<IFluentContextMenuProps> = ({
   const [aiContextCache, setAiContextCache] = useState<Map<string, string[]>>(new Map());
 
   const formatValueForDisplay = useCallback((value: any): string => {
-    if (value == null) {
+    if (ValueUtils.isNullValue(value)) {
       return strings.Chat.notAvailable;
     }
 
@@ -122,7 +123,7 @@ const FluentContextMenu: React.FunctionComponent<IFluentContextMenuProps> = ({
   }, []);
 
   const generateAIContextItems = useCallback(async (isFieldExist: boolean) => {
-    if (!columnName || cellValue == null || !rowData) return;
+    if (!columnName || ValueUtils.isNullValue(cellValue) || !rowData) return;
 
     const cacheKey = getCacheKey();
 
@@ -208,7 +209,7 @@ const FluentContextMenu: React.FunctionComponent<IFluentContextMenuProps> = ({
   };
 
   const handleCopyValue = () => {
-    if (cellValue != null) {
+    if (!ValueUtils.isNullValue(cellValue)) {
       const formattedValue = formatValueForDisplay(cellValue);
       navigator.clipboard.writeText(formattedValue);
       toast.success(strings.Chat.ContextMenu.valueCopied);

@@ -28,6 +28,7 @@ export interface ICreateRelationTabProps {
     onDeleteAction: CascadeType;
     isFormValid: boolean;
     selectedTable: { name: string } | null;
+    isRequiredJoin: boolean;
     onSourceServiceChange: (serviceId: number | null) => void;
     onSourceTableChange: (tableName: string) => void;
     onSourceColumnChange: (columnName: string) => void;
@@ -38,6 +39,7 @@ export interface ICreateRelationTabProps {
     onJoinTypeChange: (joinType: JoinType) => void;
     onUpdateActionChange: (action: CascadeType) => void;
     onDeleteActionChange: (action: CascadeType) => void;
+    onRequiredJoinChange: (isRequired: boolean) => void;
     onCreateExplicitRelation: () => void;
     onCreateImplicitRelation: () => void;
     onCancel: () => void;

@@ -8,6 +8,7 @@ interface IVirtoStrings {
     syncSuccess: string;
     syncError: string;
     loading: string;
+    addProcess: string;
 
     InfoPanel: {
         loading: string;
@@ -17,6 +18,8 @@ interface IVirtoStrings {
         recordsShort: string;
         recordsK: string;
         recordsM: string;
+        syncSuccess: string;
+        syncError: string;
     };
 
     Chat: {
@@ -61,8 +64,10 @@ interface IVirtoStrings {
         syntaxError: string;
         generationError: string;
         unclearRequest: string;
-        clarificationQuestions: string;
+        clarificationQuestionTitle: string;
         suggestedOptions: string;
+        aiSystemResponse: string;
+        improveAnswerQuestion: string;
         
         dateCategories: {
             today: string;
@@ -77,6 +82,7 @@ interface IVirtoStrings {
             noUsersAvailable: string;
             noUsersFound: string;
             selectedUsers: string;
+            ownerName: string;
             chatHistoryManageUsers: string;
             chatHistoryManageUsersTooltip: string;
             chatHistoryManageUsersTooltipSave: string;
@@ -253,6 +259,9 @@ interface IVirtoStrings {
             relationTypeToggle: string;
             implicitRelation: string;
             explicitRelation: string;
+            requiredJoinToggle: string;
+            requiredJoin: string;
+            optionalJoin: string;
             implicitRelationCreatedSuccess: string;
             implicitRelationCreationError: string;
             ruleCreationError: string;

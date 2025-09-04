@@ -4,7 +4,6 @@ using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Models.Pipedrive.Response;
 using NL2SQL.WebApp.Repositories.Interfaces;
 using NL2SQL.WebApp.Utils;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Text.Json;
 
@@ -28,15 +27,21 @@ namespace NL2SQL.WebApp.Repositories
 
             foreach (var activity in activities)
             {
-                var entity = await MapToActivityEntityAsync(activity);
-                await UpsertEntityAsync(_context.PipedriveActivities, entity,
-                    e => e.ActivityId == entity.ActivityId,
-                    existing => UpdateActivityEntity(existing, entity));
+                try
+                {
+                    var entity = await MapToActivityEntityAsync(activity);
+                    await UpsertEntityAsync(_context.PipedriveActivities, entity,
+                        e => e.ActivityId == entity.ActivityId,
+                        existing => UpdateActivityEntity(existing, entity));
 
-                successCount++;
+                    successCount += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            await _context.SaveChangesAsync();
             return successCount;
         }
 
@@ -48,15 +53,21 @@ namespace NL2SQL.WebApp.Repositories
 
             foreach (var contact in contacts)
             {
-                var entity = MapToContactEntity(contact);
-                await UpsertEntityAsync(_context.PipedriveContacts, entity,
-                    e => e.ContactId == entity.ContactId,
-                    existing => UpdateContactEntity(existing, entity));
+                try
+                {
+                    var entity = MapToContactEntity(contact);
+                    await UpsertEntityAsync(_context.PipedriveContacts, entity,
+                        e => e.ContactId == entity.ContactId,
+                        existing => UpdateContactEntity(existing, entity));
 
-                successCount++;
+                    successCount += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            await _context.SaveChangesAsync();
             return successCount;
         }
 
@@ -68,15 +79,21 @@ namespace NL2SQL.WebApp.Repositories
 
             foreach (var deal in deals)
             {
-                var entity = MapToDealEntity(deal);
-                await UpsertEntityAsync(_context.PipedriveDeals, entity,
-                    e => e.DealId == entity.DealId,
-                    existing => UpdateDealEntity(existing, entity));
+                try
+                {
+                    var entity = MapToDealEntity(deal);
+                    await UpsertEntityAsync(_context.PipedriveDeals, entity,
+                        e => e.DealId == entity.DealId,
+                        existing => UpdateDealEntity(existing, entity));
 
-                successCount++;
+                    successCount += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            await _context.SaveChangesAsync();
             return successCount;
         }
 
@@ -88,15 +105,21 @@ namespace NL2SQL.WebApp.Repositories
 
             foreach (var org in organizations)
             {
-                var entity = MapToOrganizationEntity(org);
-                await UpsertEntityAsync(_context.PipedriveOrganizations, entity,
-                    e => e.OrganizationId == entity.OrganizationId,
-                    existing => UpdateOrganizationEntity(existing, entity));
+                try
+                {
+                    var entity = MapToOrganizationEntity(org);
+                    await UpsertEntityAsync(_context.PipedriveOrganizations, entity,
+                        e => e.OrganizationId == entity.OrganizationId,
+                        existing => UpdateOrganizationEntity(existing, entity));
 
-                successCount++;
+                    successCount += await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    _context.ChangeTracker.Clear();
+                }
             }
 
-            await _context.SaveChangesAsync();
             return successCount;
         }
 
@@ -135,10 +158,6 @@ namespace NL2SQL.WebApp.Repositories
 
         private async Task<PipedriveActivityEntity> MapToActivityEntityAsync(PipedriveActivityModel activity)
         {
-            var orgId = await ValidateForeignKeyAsync(activity.OrgId, id => _context.PipedriveOrganizations.AnyAsync(o => o.Id == id));
-            var personId = await ValidateForeignKeyAsync(activity.PersonId, id => _context.PipedriveContacts.AnyAsync(c => c.Id == id));
-            var dealId = await ValidateForeignKeyAsync(activity.DealId, id => _context.PipedriveDeals.AnyAsync(d => d.Id == id));
-
             return new PipedriveActivityEntity
             {
                 ActivityId = activity.Id,
@@ -148,11 +167,13 @@ namespace NL2SQL.WebApp.Repositories
                 DueDate = activity.DueDate != null ? DateHelper.ConvertToUtc(activity.DueDate ?? DateTime.UtcNow) : null,
                 DueTime = string.IsNullOrEmpty(activity.DueTime) ? null : activity.DueTime,
                 Duration = activity.Duration,
-                OrgId = orgId,
-                PersonId = personId,
-                DealId = dealId,
+                OrgId = activity.OrgId,
+                PersonId = activity.PersonId,
+                DealId = activity.DealId,
                 AddTime = activity.AddTime != null ? DateHelper.ConvertToUtc(activity.AddTime ?? DateTime.UtcNow) : null,
                 UpdateTime = activity.UpdateTime != null ? DateHelper.ConvertToUtc(activity.UpdateTime ?? DateTime.UtcNow) : null,
+                Done = activity.Done,
+                Location = activity.Location,
                 Data = JsonSerializer.Serialize(activity)
             };
         }
@@ -189,6 +210,9 @@ namespace NL2SQL.WebApp.Repositories
                 CloseTime = deal.CloseTime != null ? DateHelper.ConvertToUtc(deal.CloseTime ?? DateTime.UtcNow) : null,
                 PipelineId = deal.PipelineId,
                 StageId = deal.StageId,
+                Active = deal.Active,
+                FormattedWeightedValue = deal.FormattedWeightedValue,
+                ProductsCount = deal.ProductsCount,
                 Data = JsonSerializer.Serialize(deal)
             };
         }
@@ -203,6 +227,10 @@ namespace NL2SQL.WebApp.Repositories
                 VisibleTo = org.VisibleTo,
                 AddTime = org.AddTime != null ? DateHelper.ConvertToUtc(org.AddTime ?? DateTime.UtcNow) : null,
                 UpdateTime = org.UpdateTime != null ? DateHelper.ConvertToUtc(org.UpdateTime ?? DateTime.UtcNow) : null,
+                PeopleCount = org.PeopleCount,
+                WonDealsCount = org.WonDealsCount,
+                LostDealsCount = org.LostDealsCount,
+                OwnerName = org.OwnerName,
                 Data = JsonSerializer.Serialize(org)
             };
         }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Web;
 using MyApp.BackgroundTasks;
 using NL2SQL.WebApp.BackgroundServices;
+using NL2SQL.WebApp.Entities.Context;
 using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Repositories;
 using NL2SQL.WebApp.Repositories.Interfaces;
@@ -96,11 +97,17 @@ namespace NL2SQL.WebApp
                 spa.Options.SourcePath = "wwwroot";
             });
 
-            // Load secrets into cache on startup
             using (var scope = app.Services.CreateScope())
             {
                 var secretsManager = scope.ServiceProvider.GetRequiredService<SecretsManager>();
                 secretsManager.LoadSecretsAsync().GetAwaiter().GetResult();
+            }
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var context = services.GetRequiredService<AppDbContext>();
+                DbInitializer.Seed(context);
             }
 
             app.Run();

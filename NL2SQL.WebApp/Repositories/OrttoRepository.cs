@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using NL2SQL.WebApp.Entities;
 using NL2SQL.WebApp.Models.Context;
 using NL2SQL.WebApp.Models.Ortto.Response;
@@ -23,8 +22,10 @@ namespace NL2SQL.WebApp.Repositories
             await _dbContext.Database.EnsureCreatedAsync();
         }
 
-        public async Task StorePersonsAsync(List<OrttoPersonModel> persons)
+        public async Task<int> StorePersonsAsync(List<OrttoPersonModel> persons)
         {
+            var totalAffected = 0;
+
             foreach (var person in persons)
             {
                 if (string.IsNullOrEmpty(person.Id))
@@ -40,9 +41,6 @@ namespace NL2SQL.WebApp.Repositories
                         Email = person.Email,
                         FirstName = person.FirstName,
                         LastName = person.LastName,
-                        DateCreated = DateHelper.ConvertToUtc(DateTime.UtcNow),
-                        DateUpdated = DateHelper.ConvertToUtc(DateTime.UtcNow),
-                        SubscriptionStatus = person.SubscriptionStatus,
                         Data = JsonSerializer.Serialize(person),
                         CreatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow),
                         UpdatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow)
@@ -60,22 +58,25 @@ namespace NL2SQL.WebApp.Repositories
                         existing.Email = entity.Email;
                         existing.FirstName = entity.FirstName;
                         existing.LastName = entity.LastName;
-                        existing.DateUpdated = DateHelper.ConvertToUtc(DateTime.UtcNow);
-                        existing.SubscriptionStatus = entity.SubscriptionStatus;
                         existing.Data = entity.Data;
                         existing.UpdatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow);
                     }
+
+                    totalAffected += await _dbContext.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
+                    _dbContext.ChangeTracker.Clear();
                 }
             }
 
-            await _dbContext.SaveChangesAsync();
+            return totalAffected;
         }
 
-        public async Task StoreOrganizationsAsync(List<OrttoOrganizationModel> organizations)
+        public async Task<int> StoreOrganizationsAsync(List<OrttoOrganizationModel> organizations)
         {
+            var totalAffected = 0;
+
             foreach (var org in organizations)
             {
                 if (string.IsNullOrEmpty(org.Id))
@@ -107,54 +108,60 @@ namespace NL2SQL.WebApp.Repositories
                         existing.UpdatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow);
                         existing.Data = entity.Data;
                     }
+
+                    totalAffected += await _dbContext.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
+                    _dbContext.ChangeTracker.Clear();
                 }
             }
 
-            await _dbContext.SaveChangesAsync();
+            return totalAffected;
         }
 
-        public async Task StoreActivitiesAsync(List<OrttoActivityModel> activities, string orttoPersonId)
+        public async Task<int> StoreActivitiesAsync(List<OrttoActivityModel> activities, string orttoPersonId)
         {
+            var totalAffected = 0;
             var person = await _dbContext.OrttoPersons
                 .FirstOrDefaultAsync(p => p.OrttoId == orttoPersonId);
 
             if (person == null)
-                return;
+                return 0;
 
             foreach (var activity in activities)
             {
                 if (string.IsNullOrEmpty(activity.Id))
                     continue;
 
-                var existing = await _dbContext.OrttoActivities
-                    .FirstOrDefaultAsync(a => a.OrttoId == activity.Id);
-
-                if (existing != null)
-                    continue;
-
-                var org = await _dbContext.OrttoOrganizations
-                    .FirstOrDefaultAsync(o => o.OrttoId == (activity.Attribute.IdtC ?? activity.Attribute.IdtA));
-
-                var organizationId = org?.OrttoId;
-
-                var entity = new OrttoActivityEntity
+                try
                 {
-                    OrttoId = activity.Id,
-                    PersonId = person.OrttoId,
-                    OrganizationId = organizationId,
-                    ActivityType = (activity.Attribute.StrCt ?? activity.Attribute.StrName),
-                    ActivityDate = activity.CreatedAt != null ? DateHelper.ConvertToUtc(activity.CreatedAt ?? DateTime.UtcNow) : DateHelper.ConvertToUtc(DateTime.UtcNow),
-                    Data = JsonSerializer.Serialize(activity),
-                    CreatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow)
-                };
+                    var existing = await _dbContext.OrttoActivities
+                        .FirstOrDefaultAsync(a => a.OrttoId == activity.Id);
 
-                _dbContext.OrttoActivities.Add(entity);
+                    if (existing != null)
+                        continue;
+
+                    var entity = new OrttoActivityEntity
+                    {
+                        OrttoId = activity.Id,
+                        PersonId = person.OrttoId,
+                        ActivityType = (activity.Attribute.StrCt ?? activity.Attribute.StrName),
+                        ActivityDate = activity.CreatedAt != null ? DateHelper.ConvertToUtc(activity.CreatedAt ?? DateTime.UtcNow) : DateHelper.ConvertToUtc(DateTime.UtcNow),
+                        Data = JsonSerializer.Serialize(activity),
+                        CreatedAt = DateHelper.ConvertToUtc(DateTime.UtcNow)
+                    };
+
+                    _dbContext.OrttoActivities.Add(entity);
+                    totalAffected += await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _dbContext.ChangeTracker.Clear();
+                }
             }
 
-            await _dbContext.SaveChangesAsync();
+            return totalAffected;
         }
 
         public async Task<int> MatchWithFreshdeskContactsAsync()

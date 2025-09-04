@@ -67,6 +67,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
     const [joinType, setJoinType] = useState<JoinType>(JoinType.LEFT);
     const [onUpdateAction, setOnUpdateAction] = useState<CascadeType>(CascadeType.NONE);
     const [onDeleteAction, setOnDeleteAction] = useState<CascadeType>(CascadeType.NONE);
+    const [isRequiredJoin, setIsRequiredJoin] = useState<boolean>(true);
     const [existingRelations, setExistingRelations] = useState<ITableRelationDisplay[]>([]);
 
     useEffect(() => {
@@ -97,6 +98,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
             setJoinType(JoinType.LEFT);
             setOnUpdateAction(CascadeType.NONE);
             setOnDeleteAction(CascadeType.NONE);
+            setIsRequiredJoin(true);
             setMessage(null);
             (async () => {
                 await loadExistingRelations();
@@ -352,7 +354,8 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                         targetColumnName,
                         joinType,
                         serviceTableId: sourceServiceTable.id,
-                        relationType
+                        relationType,
+                        isRequiredJoin
                     });
 
                     const resultCreatedRule = await addRule(sqlRule);
@@ -396,6 +399,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
             setTargetColumnName('');
             setRelationType(RelationType.OneToMany);
             setJoinType(JoinType.LEFT);
+            setIsRequiredJoin(true);
 
             setActiveTab('info');
 
@@ -468,7 +472,8 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                             joinType,
                             serviceTableId: sourceServiceTable.id,
                             relationType,
-                            junctionTableName: relation.junctionTableName
+                            junctionTableName: relation.junctionTableName,
+                            isRequiredJoin
                         });
 
                         await addRule(sqlRule);
@@ -487,7 +492,8 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                             joinType,
                             serviceTableId: targetServiceTable.id,
                             relationType,
-                            junctionTableName: relation.junctionTableName
+                            junctionTableName: relation.junctionTableName,
+                            isRequiredJoin
                         });
 
                         await addRule(reverseSqlRule);
@@ -512,7 +518,8 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                             targetColumnName,
                             joinType,
                             serviceTableId: sourceServiceTable.id,
-                            relationType
+                            relationType,
+                            isRequiredJoin
                         });
 
                         await addRule(sqlRule);
@@ -570,6 +577,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
             setJoinType(JoinType.LEFT);
             setOnUpdateAction(CascadeType.NONE);
             setOnDeleteAction(CascadeType.NONE);
+            setIsRequiredJoin(true);
 
             setActiveTab('info');
         } catch (error) {
@@ -669,7 +677,6 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
             const rulesToDelete = allRules.filter(rule => {
                 if (!rule.serviceTableId) return false;
 
-
                 if (relationToDelete.relationType === RelationType.ManyToMany && relationToDelete.junctionTableName) {
                     const hasJunctionTable = rule.text.includes(relationToDelete.junctionTableName);
 
@@ -679,7 +686,13 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                     const reverseManyToManyPattern = rule.text.includes(`JOIN ${relationToDelete.junctionTableName} ON ${relationToDelete.targetTableName}.${relationToDelete.targetColumnName} = ${relationToDelete.junctionTableName}.${relationToDelete.targetColumnName}`) &&
                         rule.text.includes(`JOIN ${relationToDelete.sourceTableName} ON ${relationToDelete.junctionTableName}.${relationToDelete.sourceColumnName} = ${relationToDelete.sourceTableName}.${relationToDelete.sourceColumnName}`);
 
-                    return hasJunctionTable || manyToManyPattern || reverseManyToManyPattern;
+                    const optionalManyToManyPattern = rule.text.includes(`Only trigger an automatic`) && 
+                        rule.text.includes(`JOIN between ${relationToDelete.sourceTableName} and ${relationToDelete.targetTableName} through ${relationToDelete.junctionTableName}`);
+
+                    const reverseOptionalManyToManyPattern = rule.text.includes(`Only trigger an automatic`) && 
+                        rule.text.includes(`JOIN between ${relationToDelete.targetTableName} and ${relationToDelete.sourceTableName} through ${relationToDelete.junctionTableName}`);
+
+                    return hasJunctionTable || manyToManyPattern || reverseManyToManyPattern || optionalManyToManyPattern || reverseOptionalManyToManyPattern;
                 } else {
                     const mainRulePattern = rule.text.includes(`JOIN ${relationToDelete.targetTableName} with ${relationToDelete.sourceTableName} their link ${relationToDelete.targetTableName}.${relationToDelete.targetColumnName} = ${relationToDelete.sourceTableName}.${relationToDelete.sourceColumnName}`);
 
@@ -688,7 +701,21 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                     const isFromSourceTable = rule.text.includes(`when selecting from ${relationToDelete.sourceTableName}`);
                     const isFromTargetTable = rule.text.includes(`when selecting from ${relationToDelete.targetTableName}`);
 
-                    return (mainRulePattern && isFromSourceTable) || (reverseRulePattern && isFromTargetTable);
+                    const optionalMainPattern = rule.text.includes(`Only trigger an automatic`) && 
+                        rule.text.includes(`JOIN between ${relationToDelete.sourceTableName} and ${relationToDelete.targetTableName} on ${relationToDelete.sourceTableName}.${relationToDelete.sourceColumnName} = ${relationToDelete.targetTableName}.${relationToDelete.targetColumnName}`);
+
+                    const optionalReversePattern = rule.text.includes(`Only trigger an automatic`) && 
+                        rule.text.includes(`JOIN between ${relationToDelete.targetTableName} and ${relationToDelete.sourceTableName} on ${relationToDelete.targetTableName}.${relationToDelete.targetColumnName} = ${relationToDelete.sourceTableName}.${relationToDelete.sourceColumnName}`);
+
+                    const crossJoinPattern = rule.text.includes(`CROSS JOIN ${relationToDelete.targetTableName} with ${relationToDelete.sourceTableName}`);
+                    const optionalCrossJoinPattern = rule.text.includes(`Only trigger an automatic CROSS JOIN between ${relationToDelete.sourceTableName} and ${relationToDelete.targetTableName}`);
+
+                    return (mainRulePattern && isFromSourceTable) || 
+                           (reverseRulePattern && isFromTargetTable) || 
+                           optionalMainPattern || 
+                           optionalReversePattern || 
+                           crossJoinPattern || 
+                           optionalCrossJoinPattern;
                 }
             });
 
@@ -1016,6 +1043,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                             onDeleteAction={onDeleteAction}
                             isFormValid={isFormValid}
                             selectedTable={selectedTable}
+                            isRequiredJoin={isRequiredJoin}
                             onSourceServiceChange={(serviceId) => {
                                 setSourceServiceId(serviceId);
                                 setSourceTableName('');
@@ -1040,6 +1068,7 @@ const RelationsPanelBase: React.FC<IRelationsPanelProps> = ({
                             onJoinTypeChange={setJoinType}
                             onUpdateActionChange={setOnUpdateAction}
                             onDeleteActionChange={setOnDeleteAction}
+                            onRequiredJoinChange={setIsRequiredJoin}
                             onCreateExplicitRelation={handleCreateExplicitRelation}
                             onCreateImplicitRelation={handleCreateImplicitRelation}
                             onCancel={onDismiss}
