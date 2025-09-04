@@ -1,5 +1,5 @@
 import { Stack, TextField, IconButton, ThemeProvider, styled } from '@fluentui/react';
-import { decryptAES, encryptAES } from '../../../utils/aes';
+import { decryptAES, encryptAES } from '../../../../utils/aes';
 import type { ISecretsSettingsFormProps, ISecretsSettingsFormStyleProps, ISecretsSettingsFormStyles } from './SecretsSettingsForm.types';
 import { getStyles } from './SecretsSettingsForm.styles';
 import { useState } from 'react';
