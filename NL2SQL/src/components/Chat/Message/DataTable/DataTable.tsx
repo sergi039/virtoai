@@ -12,6 +12,7 @@ import {
 import type { IDataTableProps, IDataTableStyleProps, IDataTableStyles } from './DataTable.types';
 import { getClassNames, getStyles } from './DataTable.styles';
 import { DateChatUtils } from '../../../../utils/dateChatUtils';
+import { ValueUtils } from '../../../../utils/valueUtils';
 
 const DataTableBase: React.FC<IDataTableProps> = ({
   data,
@@ -56,7 +57,7 @@ const DataTableBase: React.FC<IDataTableProps> = ({
       onRender: (item: Record<string, any>) => {
         const value = item[key];
 
-        if (value == null) {
+        if (ValueUtils.isNullValue(value)) {
           return strings.Chat.notAvailable;
         }
 
@@ -92,7 +93,7 @@ const DataTableBase: React.FC<IDataTableProps> = ({
 
             const isClickable = isCellClickable(tableName, columnName, item);
 
-            if (isClickable && value != null) {
+            if (isClickable && !ValueUtils.isNullValue(value)) {
               return (
                 <Text
                   className={classNames.redirectText}

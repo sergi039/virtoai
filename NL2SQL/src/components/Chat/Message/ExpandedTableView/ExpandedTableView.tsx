@@ -14,6 +14,7 @@ import {
 } from '@fluentui/react';
 import type { IExpandedTableViewProps, IExpandedTableViewStyleProps, IExpandedTableViewStyles } from './ExpandedTableView.types';
 import { getStyles, getClassNames } from './ExpandedTableView.styles';
+import { ValueUtils } from '../../../../utils/valueUtils';
 import strings from '../../../../Ioc/en-us';
 
 const ExpandedTableViewBase: React.FunctionComponent<IExpandedTableViewProps> = ({
@@ -102,6 +103,10 @@ const ExpandedTableViewBase: React.FunctionComponent<IExpandedTableViewProps> = 
     onRender: (item: Record<string, any>) => {
       const value = item[key];
 
+      if (ValueUtils.isNullValue(value)) {
+        return strings.Chat.notAvailable;
+      }
+
       const keyParts = key.split(':');
 
       if (keyParts.length === 2) {
@@ -114,7 +119,7 @@ const ExpandedTableViewBase: React.FunctionComponent<IExpandedTableViewProps> = 
 
           const isClickable = isCellClickable && isCellClickable(tableName, columnName, item);
 
-          if (isClickable && value != null) {
+          if (isClickable && !ValueUtils.isNullValue(value)) {
             return (
               <Text
                 className={classNames.redirectText}
@@ -129,7 +134,7 @@ const ExpandedTableViewBase: React.FunctionComponent<IExpandedTableViewProps> = 
 
       return (
         <span style={{ wordBreak: 'break-word' }}>
-          {value != null ? value.toString() : strings.Chat.notAvailable}
+          {ValueUtils.isNullValue(value) ? strings.Chat.notAvailable : value.toString()}
         </span>
       );
     },
